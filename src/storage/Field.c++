@@ -1,0 +1,280 @@
+#include<iostream>
+#include<string>
+#include<cstring>
+#include "Field.h"
+using namespace std;
+
+
+    
+        Field::Field(FieldType type,int value){
+            fieldType  = FieldType(type);
+            VALUE_INT = value;
+            this->size = sizeof(value);
+        }
+        Field::Field(FieldType type,double value){
+            fieldType  = FieldType(type);
+            this->size = sizeof(value);
+            VALUE_FLOAT = value;
+            
+        }
+        Field::Field(FieldType type,bool value){
+            fieldType  = FieldType(type);
+            VALUE_BOOL = value;
+            this->size = sizeof(value);
+        }
+        Field::Field(FieldType type,const char* value){
+            fieldType  = FieldType(type);
+            this->size = strlen(value);
+            VALUE_STRING = value;
+            
+        }
+
+    Field::Field(const Field& other) {
+        this->fieldType = other.fieldType;
+        this->size = other.size;
+        this->is_null = other.is_null;
+
+        if (fieldType == TYPE_STRING && other.VALUE_STRING != nullptr) {
+            this->VALUE_STRING = new char[size + 1];
+            memcpy((void*)this->VALUE_STRING, other.VALUE_STRING, size + 1);
+        } else {
+            this->VALUE_STRING = nullptr; // Or copy other primitive types
+            this->VALUE_INT = other.VALUE_INT;
+            this->VALUE_FLOAT = other.VALUE_FLOAT;
+            this->VALUE_BOOL = other.VALUE_BOOL;
+        }
+    }
+
+
+        Field::Field(FieldType type):fieldType(type){
+            this->is_null = true;
+            this->size = 0;
+            switch (type)
+            {
+            case TYPE_INT:
+                VALUE_INT = 0;
+                break;
+            case TYPE_FLOAT:
+                VALUE_FLOAT = 0.0;
+                break;
+            case TYPE_STRING:
+                VALUE_STRING = nullptr;
+                break;
+            case TYPE_BOOL:
+                VALUE_BOOL = false;
+                break;
+            default:
+                break;
+            }
+
+        }
+
+        FieldType Field::getFieldType(){
+            return this->fieldType;
+        }
+        bool Field::isNull()  { return is_null; }
+        int Field::getSize() { return size; }
+
+        int Field::getSerializedSize() const {
+            return 1 + 1+ 4 + size; 
+        }
+        void Field::print()  {
+            switch (fieldType) {
+                case TYPE_INT:
+                    cout <<"value : " << VALUE_INT<<endl;
+                    cout<<"size : "<<size<<endl;
+                    break;
+
+                case TYPE_FLOAT: 
+                    if (this->is_null) {
+                        cout << "value : [NULL]" << endl;
+                        cout << "size : 0" << endl;
+                    } else {
+                        cout << "value : " << VALUE_FLOAT << endl;
+                        cout << "size : " << size << endl;
+                    }
+                    break;
+
+                case TYPE_STRING: 
+                    if (this->is_null) {
+                        cout << "value : [NULL]" << endl;
+                        cout << "size : 0" << endl;
+                    } else {
+                        cout << "value : " << VALUE_STRING << endl;
+                        cout << "size : " << size << endl;
+                    }
+                    break;
+
+                case TYPE_BOOL:   
+                    cout <<"value : " << VALUE_BOOL<<endl;
+                    cout<<"size : "<<size<<endl;
+                    break;
+                }
+
+        cout << endl;
+    }
+
+    void Field::serialize(char buffer[]){
+
+            int offset = 1;
+            memcpy(buffer+offset,&size,sizeof(int));
+            offset+=sizeof(int);
+
+            memcpy(buffer+offset,&is_null,sizeof(bool));
+            offset+=1;
+        switch (fieldType)
+        {
+        case TYPE_INT:{
+            buffer[0] = 'I';
+
+            if(!is_null)
+                memcpy(buffer+offset,&VALUE_INT,sizeof(int));
+            else 
+                memset(buffer+offset,0,sizeof(int));
+            
+            offset+=sizeof(int);
+
+            break;
+        }
+        case TYPE_FLOAT:{
+            buffer[0] = 'F';
+
+            if(!is_null)
+                memcpy(buffer+offset,&VALUE_FLOAT,sizeof(double));
+            else 
+                memset(buffer+offset,0,sizeof(double));
+            
+            offset+=sizeof(double);
+
+            break;
+        }
+        case TYPE_BOOL:{
+            buffer[0] = 'B';
+
+            if(!is_null)
+                memcpy(buffer+offset,&VALUE_BOOL,sizeof(bool));
+            else 
+                memset(buffer+offset,0,sizeof(bool));
+            
+            offset+=sizeof(bool);
+
+            break;
+        }
+        case TYPE_STRING:{
+            buffer[0] = 'S';
+
+            if(!is_null)
+                memcpy(buffer+offset,VALUE_STRING,size);
+            else 
+                memset(buffer+offset,0,size);
+
+            buffer[offset+size] = '\0';
+            offset += size;
+            break;
+        }
+
+        default:
+            throw runtime_error("incorrect data type");
+            break;
+        }
+    }
+
+
+    void Field::deserialize(char buffer[]){
+        char type = buffer[0];
+        int offset = 1;
+        
+        memcpy(&this->size,buffer+offset,sizeof(int));
+        offset+=sizeof(int);
+
+        memcpy(&this->is_null,buffer+offset,sizeof(bool));
+        offset+=sizeof(bool);
+
+        switch (type)
+        {
+        case 'I':{
+            this->fieldType = TYPE_INT;
+            memcpy(&this->VALUE_INT,buffer+offset,sizeof(int));
+            offset+=sizeof(int);
+            break;
+        }
+        case 'F':{
+            this->fieldType = TYPE_FLOAT;
+            memcpy(&this->VALUE_FLOAT,buffer+offset,sizeof(double));
+            offset+=sizeof(double);
+            break;
+        }
+        case 'B':{
+            this->fieldType = TYPE_BOOL;
+            memcpy(&this->VALUE_BOOL,buffer+offset,sizeof(bool));
+            offset+=sizeof(bool);
+            break;
+        }
+        case 'S':{
+            this->fieldType = TYPE_STRING;
+            VALUE_STRING = new char[size+1];
+            memcpy((void*)VALUE_STRING,buffer+offset,size);
+            ((char*)VALUE_STRING)[size] = '\0';
+            offset+=size;
+            break;
+        }
+
+        default:
+            break;
+        }
+
+}
+
+Field::~Field(){
+    if(fieldType == TYPE_STRING && VALUE_STRING != nullptr){
+        delete[]VALUE_STRING;
+        //cout<<"deleted successfuly!"<<endl;
+    }
+}
+
+/*
+int main(){
+
+    FieldType int_field = TYPE_INT;
+    Field f1(int_field,5);
+    f1.print();
+
+    FieldType string_field = TYPE_STRING;
+    Field f2(string_field,"nader");
+    f2.print();
+
+    FieldType float_field = TYPE_FLOAT;
+    Field f3(float_field,6.4);
+    f3.print();
+
+    FieldType bool_field = TYPE_BOOL;
+    Field f4(bool_field,true);
+    f4.print();
+
+    Field f5(string_field);
+    f5.print();
+
+    // testing serialize 
+    char* buffer = new char[100];
+    f1.serialize(buffer);
+    for(int i = 0; i < 10; i++) {
+    // Cast to unsigned char to see the actual byte values (0-255)
+    cout << (int)(unsigned char)buffer[i] << " ";
+    }
+    cout<<endl;
+    delete []buffer;
+
+    char* buffer2 = new char[100];
+    f2.serialize(buffer2);
+    for(int i = 0; i < 12; i++) {
+    // Cast to unsigned char to see the actual byte values (0-255)
+    cout << (int)(unsigned char)buffer2[i] << " ";
+    }
+    cout<<endl;
+
+    Field* f6 = new Field(int_field);
+    f6->deserialize(buffer2);
+    f6->print();
+    delete f6;
+}
+*/
