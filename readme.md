@@ -1,6 +1,7 @@
 Minimalistic Disk-Based Storage Manager
 A high-performance C++ storage engine implementing a Slotted-Page architecture with a Buffer Pool Manager (BPM) to bridge the gap between volatile memory and persistent disk storage.
 
+
 # Key Features
 Slotted-Page Structure: Efficiently manages variable-length tuples within fixed-size 4KB pages.
 
