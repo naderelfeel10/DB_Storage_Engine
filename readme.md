@@ -23,7 +23,7 @@ The storage manager is built in four distinct layers:
   Tuple: A collection of Fields. It tracks its own size and deletion status.
 
 2. The Page Layer (Page)
-Uses the Slotted-Page contains the Tuples design to handle fragmentation
+   Uses the Slotted-Page contains the Tuples design to handle fragmentation
 
 Header: Stores metadata like free_space_pointer and num_tuples.
 
