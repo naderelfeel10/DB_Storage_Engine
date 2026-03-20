@@ -55,6 +55,7 @@ The storage manager is built in four distinct layers:
 
 
 5. [LRU Replacement](https://github.com/naderelfeel10/DB_storage_manager/blob/main/src/storage/LRU_replacement.c%2B%2B):
+   
    Algorithm: Implements O(1) Least Recently Used policy using a std::unordered_map and a Doubly Linked List.
    
    Buffer Integration: Manages Frame ID eviction for the BufferPoolManager to balance memory and disk I/O.Safety: Uses Sentinel Nodes (D_head/D_tail) to       eliminate null pointer crashes during high-frequency pointer re-linking.
