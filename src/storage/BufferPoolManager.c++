@@ -1,11 +1,14 @@
 #include<iostream>
 #include"BufferPoolManager.h"
+#define evict_using_lru true;
+
 using namespace std;
 
 
 BufferPoolManager::BufferPoolManager(DiskManager* dm){
     this->disk_manager = dm;
-    
+    this->lru = new LRU(BUFFER_SIZE);
+
     for(int i{};i<BUFFER_SIZE;i++){
         this->frames[i] = new char[PAGE_SIZE];
 
@@ -25,19 +28,31 @@ char* BufferPoolManager::fetchPage(int page_id){
 
     if(page_table.find(page_id) != page_table.end()){
         frame_id = page_table[page_id];
+
+        //just to update the cache
+        char* dummy = lru->get_frame(frame_id);
+        
         return frames[frame_id];
 
     }
     else if(free_frames_ids.empty()){
 
-        // just evict the last frame for now
-        frame_id = BUFFER_SIZE-1;
+        
+        // using LRU :
+        #ifdef evict_using_lru
+            frame_id  = lru->evict_frame();
+
+        #else 
+            // just evict the last frame
+            frame_id = BUFFER_SIZE-1;
+        #endif
+
         int old_page_id = pages_ids[frame_id];
         if(is_dirty[frame_id]){
             disk_manager->writePage(old_page_id, frames[frame_id]);
         }
 
-        page_table.erase(frame_id);
+        page_table.erase(old_page_id);
     }
     else{
     
@@ -57,6 +72,7 @@ char* BufferPoolManager::fetchPage(int page_id){
     is_dirty[frame_id] = false;
     page_table[page_id] = frame_id;
     //pin_count[frame_id]++;
+    lru->put_frame(frame_id, frames[frame_id]);
     return frames[frame_id];
 }
 
@@ -75,6 +91,8 @@ void BufferPoolManager::deletePage(int page_id){
         pages_ids[frame_id] = -1;
         is_dirty[frame_id] = false;
         free_frames_ids.push_back(frame_id);
+
+        lru->remove_frame(frame_id);
 
     }
 }
@@ -178,22 +196,20 @@ void createTenPages(DiskManager* dm) {
     cout<<"done "<<endl;
 }
 
+
 int main(){
 
     DiskManager* dm = new DiskManager("elfeel");
     BufferPoolManager BPM(dm);
 
-
-    /*
-    createTenPages(dm);
-    */
+    
+    //createTenPages(dm);
+    
     
     testPersistence1(BPM);
 
     dm->~DiskManager();
-
-
-    
+  
 
 
 }

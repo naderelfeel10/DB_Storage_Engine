@@ -8,6 +8,7 @@
 #include <vector>
 #include <utility>
 #include "DiskManager.h"
+#include "LRU_replacement.h"
 #define BUFFER_SIZE 100
 using namespace std;
 
@@ -16,11 +17,13 @@ using namespace std;
     and a Buffer Pool Manager (BPM) to bridge the gap between volatile
     memory and persistent disk storage.
 */
+
+
 class BufferPoolManager{
     private:
 
         DiskManager* disk_manager;
-        
+        LRU* lru;
 
         char* frames[BUFFER_SIZE];
 
@@ -33,6 +36,7 @@ class BufferPoolManager{
 
         size_t num_frames{BUFFER_SIZE};
        
+
     public:
         BufferPoolManager(DiskManager* dm);
         ~BufferPoolManager();
