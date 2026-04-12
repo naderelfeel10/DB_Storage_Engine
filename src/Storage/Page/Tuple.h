@@ -11,10 +11,10 @@ class Tuple {
     private:
         bool is_deleted{false};
         int tulpe_size{};
-        std::vector<Field>fields;
 
 public:
     Tuple(std::vector<Field>fields);
+    std::vector<Field>fields;
 
 
     //int getSize() ;

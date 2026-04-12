@@ -10,7 +10,8 @@
 #define PAGE_SIZE 4096
 
 struct __attribute__((packed)) PageHeader {
-    uint16_t page_id;
+    uint32_t page_id;
+    int32_t  next_page_id;
     uint16_t num_tuples = 0;
     uint16_t num_deleted_tuples = 0;
     uint16_t free_space_pointer = PAGE_SIZE;

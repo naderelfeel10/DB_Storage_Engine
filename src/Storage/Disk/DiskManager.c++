@@ -148,7 +148,8 @@ void DiskManager::writePage(int page_id, const char* data){
     if(pages_table.find(page_id)!= pages_table.end()){
         offset = pages_table[page_id];
     }else{
-        offset = allocatePage();
+        //offset = allocatePage();
+        return;
     }
 
     cout<<"offset : "<<offset<<endl;
@@ -219,8 +220,22 @@ size_t DiskManager::allocatePage(){
         resizeFile();
     }
 
-    return (pages_table.size() + 1) * PAGE_SIZE;
+    int page_id = pages_table.size()+1;
+
+    Page* newPage =  new Page(page_id);
+    size_t offset = (page_id) * PAGE_SIZE;
+
+    
+    DB_file.seekp(offset);
+    DB_file.write(newPage->getData(), PAGE_SIZE);
+    DB_file.flush();    
+
+    pages_table[page_id] = offset;
+
+    return offset;
 }
+
+
 
 size_t DiskManager::getSize() {
     return (pages_table.size()+deleted_slots.size())*PAGE_SIZE;

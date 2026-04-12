@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <vector>
 #include <utility>
-#include "DiskManager.h"
+#include "../Storage/Disk/DiskManager.h"
 #include "LRU_replacement.h"
 #define BUFFER_SIZE 100
 using namespace std;
@@ -22,7 +22,6 @@ using namespace std;
 class BufferPoolManager{
     private:
 
-        DiskManager* disk_manager;
         LRU* lru;
 
         char* frames[BUFFER_SIZE];
@@ -38,9 +37,12 @@ class BufferPoolManager{
        
 
     public:
+        DiskManager* disk_manager;
         BufferPoolManager(DiskManager* dm);
         ~BufferPoolManager();
         char* fetchPage(int page_id);
+        int newPage();
+
         void deletePage(int page_id);
         void unpinPage(int page_id, bool is_dirty_flag);
         void markAsDirty(int page_id);

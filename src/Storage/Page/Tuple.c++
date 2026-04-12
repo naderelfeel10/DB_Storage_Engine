@@ -13,6 +13,9 @@ Tuple::Tuple(vector<Field> fields){
 }
 
 void Tuple::print(){
+        cout<<"is deleted << "<<this->get_is_deleted()<<endl;
+        cout<<"tuple size << "<<this->tulpe_size<<endl;
+
         for(auto& field : this->fields) {
             field.print();
     }

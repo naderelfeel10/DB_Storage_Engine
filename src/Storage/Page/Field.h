@@ -2,6 +2,7 @@
 #define FIELD_H
 
 #include <iostream>
+#include <variant>
 #include <cstring>
 
 enum FieldType { TYPE_INT, TYPE_STRING, TYPE_FLOAT, TYPE_BOOL };
@@ -28,6 +29,17 @@ public:
     Field(FieldType type);
     ~Field();
 
+    void setValue(int value);
+    void setValue(double value);
+    void setValue(bool value);
+    void setValue(const char* value);
+
+
+    int getFieldValueInt();
+    float getFieldValueFloat();
+    bool getFieldValueBool();
+    const char* getFieldValueStr();
+
 
     FieldType getFieldType() ;
     bool isNull() ;
@@ -37,6 +49,7 @@ public:
     void print() ;
     void serialize(char* buffer);
     void deserialize(char* buffer);
+    Field& operator=(const Field& other);
 
 };
 

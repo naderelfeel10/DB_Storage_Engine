@@ -6,7 +6,7 @@
 #include <fstream>
 #include <unordered_map>
 #include <vector>
-#include "page.h"
+#include "../Page/page.h"
 #define FILE_CAPACITY 100
 
 
@@ -24,21 +24,20 @@ struct __attribute__((packed)) DBHeader {
 };
 
 
-class  DiskManager{
+class DiskManager{
 
     private:
         DBHeader header;
         string file_name;
-        fstream DB_file;
         unordered_map<int, size_t> pages_table;
         vector<size_t> deleted_slots;
 
-        size_t allocatePage();
         void resizeFile();        
         auto getFileSize(const string&file_name);
     
         
     public:
+        fstream DB_file;
         DiskManager(const string&file_name);
         ~DiskManager();
         void saveMetaData();
@@ -46,6 +45,7 @@ class  DiskManager{
         void writePage(int page_id, const char*data);
         void readPage(int page_id, char*data);
         void deletePage(int page_id);
+        size_t allocatePage();
         size_t getSize();
         
 

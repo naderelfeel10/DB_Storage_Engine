@@ -25,7 +25,9 @@ using namespace std;
         Field::Field(FieldType type,const char* value){
             fieldType  = FieldType(type);
             this->size = strlen(value);
-            VALUE_STRING = value;
+            //VALUE_STRING = value;
+            this->VALUE_STRING = new char[this->size + 1];
+            strcpy((char*)this->VALUE_STRING, value);
             
         }
 
@@ -72,12 +74,18 @@ using namespace std;
         FieldType Field::getFieldType(){
             return this->fieldType;
         }
+
+
+
+
         bool Field::isNull()  { return is_null; }
         int Field::getSize() { return size; }
+
 
         int Field::getSerializedSize() const {
             return 1 + 1+ 4 + size; 
         }
+
         void Field::print()  {
             switch (fieldType) {
                 case TYPE_INT:
@@ -113,6 +121,20 @@ using namespace std;
 
         cout << endl;
     }
+
+
+int Field::getFieldValueInt() {
+    return VALUE_INT;
+}
+float Field::getFieldValueFloat() {
+    return VALUE_FLOAT;
+}
+bool Field::getFieldValueBool() {
+    return VALUE_BOOL;
+}
+const char* Field::getFieldValueStr() {
+    return VALUE_STRING;
+}
 
     void Field::serialize(char buffer[]){
 
@@ -224,6 +246,88 @@ using namespace std;
         }
 
 }
+
+
+
+void Field::setValue(int value){
+    this->VALUE_INT = value;
+    this->fieldType = TYPE_INT;
+    this->is_null = false;
+}
+
+
+void Field::setValue(double value){
+    this->VALUE_FLOAT = value;
+    this->fieldType = TYPE_FLOAT;
+    this->is_null = false;
+}
+
+
+void Field::setValue(bool value){
+    this->VALUE_BOOL = value;
+    this->fieldType = TYPE_BOOL;
+    this->is_null = false;
+}
+/*
+void Field::setValue(const char* value){
+    
+    char* new_string = new char[strlen(value) + 1];
+    strcpy(new_string, value);
+
+    this->VALUE_STRING = new_string;
+    this->is_null = false;
+}
+*/
+void Field::setValue(const char* value) {
+
+
+    if (value == nullptr) {
+        this->is_null = true;
+        return;
+    }
+
+    int len = strlen(value);
+    char* new_string = new char[len + 1];
+    
+    strcpy(new_string, value);
+
+    this->VALUE_STRING = new_string;
+    this->fieldType = TYPE_STRING;
+    this->is_null = false;
+}
+
+
+
+
+
+Field& Field::operator=(const Field& other) {
+    if (this == &other) return *this;
+
+    if (this->fieldType == TYPE_STRING && this->VALUE_STRING != nullptr) {
+        delete[] this->VALUE_STRING;
+        this->VALUE_STRING = nullptr;
+    }
+
+    this->fieldType = other.fieldType;
+    this->size = other.size;
+    this->is_null = other.is_null;
+
+    if (other.fieldType == TYPE_STRING && other.VALUE_STRING != nullptr) {
+        this->VALUE_STRING = new char[other.size + 1];
+        memcpy((void*)this->VALUE_STRING, other.VALUE_STRING, other.size + 1);
+        
+    } else {
+        this->VALUE_INT = other.VALUE_INT;
+        this->VALUE_FLOAT = other.VALUE_FLOAT;
+        this->VALUE_BOOL = other.VALUE_BOOL;
+    }
+
+    return *this;
+}
+
+
+
+
 
 Field::~Field(){
     if(fieldType == TYPE_STRING && VALUE_STRING != nullptr){

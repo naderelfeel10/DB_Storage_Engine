@@ -11,8 +11,10 @@ Page::Page(int page_id){
     PageHeader* header = reinterpret_cast<PageHeader*>(data);
     header->page_id = (uint16_t)page_id;
     header->num_tuples = 0;
+    header->next_page_id = -1;
     header->num_deleted_tuples = 0;
     header->free_space_pointer = PAGE_SIZE;
+    //memcpy(data,header,sizeof(PageHeader));
 }
 
 // insert a tuple then return tuple id
@@ -106,7 +108,7 @@ int Page::updateTuple(int slot_num, Tuple new_tuple){
     Slot* slots = reinterpret_cast<Slot*>(data+sizeof(PageHeader));
     
     int dummy2 = slot_num;
-    if (new_tuple.getTupleSize() != slots[slot_num].size){
+    if (new_tuple.getTupleSize() > slots[slot_num].size){
         cout<<"old and new tuple sizes are not equal"<<endl;
         bool dummy1 = this->deleteTuple(slot_num);
         if(dummy1){

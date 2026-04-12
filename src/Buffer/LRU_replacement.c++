@@ -95,6 +95,7 @@ int LRU::evict_frame(){
     delete evicted_frame;
     return frame_id;
 }
+
 void LRU::remove_frame(int key){
     Frame* evicted_frame = frames_map[key];
 

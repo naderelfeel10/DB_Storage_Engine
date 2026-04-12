@@ -35,7 +35,8 @@ char* BufferPoolManager::fetchPage(int page_id){
         return frames[frame_id];
 
     }
-    else if(free_frames_ids.empty()){
+
+    if(free_frames_ids.empty()){
 
         
         // using LRU :
@@ -62,6 +63,7 @@ char* BufferPoolManager::fetchPage(int page_id){
     }
 
     char* buffer = frames[frame_id];
+
     disk_manager->readPage(page_id, buffer);
 
     PageHeader* header1 = reinterpret_cast<PageHeader*>(buffer);
@@ -75,6 +77,61 @@ char* BufferPoolManager::fetchPage(int page_id){
     lru->put_frame(frame_id, frames[frame_id]);
     return frames[frame_id];
 }
+
+
+int BufferPoolManager::newPage(){
+    
+    int frame_id = -1;
+
+    if(free_frames_ids.empty()){
+        
+        // using LRU :
+        #ifdef evict_using_lru
+            frame_id  = lru->evict_frame();
+
+        #else 
+            // just evict the last frame
+            frame_id = BUFFER_SIZE-1;
+        #endif
+
+        int old_page_id = pages_ids[frame_id];
+        if(is_dirty[frame_id]){
+            disk_manager->writePage(old_page_id, frames[frame_id]);
+        }
+
+        page_table.erase(old_page_id);
+    }
+    else{
+    
+        frame_id = free_frames_ids.back();
+        free_frames_ids.pop_back();
+    
+    }
+
+    //char* buffer = frames[frame_id];
+
+    int new_page_id = (disk_manager->allocatePage())/PAGE_SIZE;
+    disk_manager->readPage(new_page_id,frames[frame_id]);
+
+    cout<<"new page id :"<<new_page_id<<endl;
+
+
+    pages_ids[frame_id] = new_page_id;
+    is_dirty[frame_id] = false;
+    page_table[new_page_id] = frame_id;
+    //pin_count[frame_id]++;
+    lru->put_frame(frame_id, frames[frame_id]);
+
+
+    return new_page_id;
+}
+
+
+
+
+
+
+
 
 
 void BufferPoolManager::deletePage(int page_id){
@@ -196,7 +253,7 @@ void createTenPages(DiskManager* dm) {
     cout<<"done "<<endl;
 }
 
-
+/*
 int main(){
 
     DiskManager* dm = new DiskManager("elfeel");
@@ -206,10 +263,16 @@ int main(){
     //createTenPages(dm);
     
     
-    testPersistence1(BPM);
+    //testPersistence1(BPM);
 
+    int new_page_id =  BPM.newPage();
+    cout<<"new page id "<<new_page_id<<endl;
+
+    new_page_id =  BPM.newPage();
+    cout<<"new page id "<<new_page_id<<endl;
     dm->~DiskManager();
   
 
 
 }
+*/
