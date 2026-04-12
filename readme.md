@@ -1,46 +1,95 @@
-# Disk-Based DataBase Storage Engine
+# Disk-Based DB Storage Engine
 
-#### a custom-built, persistent storage engine written in C++17.
-#### It bridges the gap between raw byte storage and relational data management by implementing a Slotted-Page architecture, Disk Manager and a Buffer Pool Manager.
-#### It is designed to handle variable-length records with high efficiency while minimizing disk I/O through an optimized LRU eviction policy.
-#### CRUD operations on tuples using TableHeap & TableIterator for linear search.
+##### A lightweight C++ database storage engine that demonstrates how data moves between memory and disk. It implements core components like a Buffer Pool Manager, Disk Manager, LRU replacement, and slotted-page storage. The project provides table-level abstractions with tuple operations and iteration, mimicking real database internals.
 
+## This project implements core database internals including:
+1. DiskManager:    handles reading/writing pages to disk.
+2. BufferPoolManager (BPM):    caches pages in memory.
+3. LRU:    decides which page to evict when memory is full.
+4. Page & Tuple:    manage data layout inside pages.
+5. TableHeap:    provides table-level abstraction.
+6. TableIterator:    enables sequential scans.
+
+---- 
 # System Architecture
 
 <img width="758" height="467" alt="image" src="https://github.com/user-attachments/assets/6942c2ec-85d8-404b-9b49-d963fbba99c0" />
 
 
 ## 1. [Buffer](https://github.com/naderelfeel10/DB_storage_manager/tree/main/src/Buffer)
-This folder handles the "Virtual Memory" of the database. It keeps frequently accessed pages in RAM so the system doesn't have to read from the disk constantly.
 
-BufferPoolManager: The orchestrator. It fetches pages from the disk and places them into memory "frames." It tracks which pages are modified (is_dirty) and which are currently in use (pin_count).
-
-LRU_replacement: The eviction policy. When the buffer is full, this module uses a Least Recently Used algorithm (implemented with a Doubly Linked List and Hash Map) to decide which page to remove to make room for new data.
-
+Implements the Buffer Pool Manager (BPM).
+#### Implements Least Recently Used (LRU) page replacement.
+### Responsibilities:
+1. Cache pages from disk into memory frames
+2. Track page usage and pin counts
+3. Coordinate with LRU for eviction
+4. Sync dirty pages back to disk
+## Key Functions:
+1. fetchPage(page_id) → Load page into memory
+2. newPage() → Allocate a new page
+3. deletePage(page_id) → Remove page from system
+4. unpinPage(page_id, is_dirty) → Release page usage
+5. markAsDirty(page_id) → Mark page for disk write
+   
 ## 2. [Disk](https://github.com/naderelfeel10/DB_storage_manager/tree/main/src/Storage/Disk)
-The lowest layer of the system that talks directly to the Operating System.
+Handles persistent storage of pages in a file.
 
-DiskManager: Handles the physical .db file. It maps logical PageIDs to actual byte offsets on your hard drive and performs the raw read and write operations.
+### Responsibilities:
+1. Manage database file
+2. Allocate/deallocate pages
+3. Maintain metadata (header, directory)
+### Core Structures:
+1. DBHeader → File metadata (capacity, sizes)
+2. DirectoryEntry → Maps page_id → file offset
+3. Key Functions:
+4. writePage(page_id, data)
+5. readPage(page_id, data)
+6. allocatePage() → Get new disk page
+7. deletePage(page_id)
+8. saveMetaData() / loadMetaData()
 
 ## 3. [Page](https://github.com/naderelfeel10/DB_storage_manager/tree/main/src/Storage/Page)
-Defines how data is organized inside a single 4KB block.
+#### Defines how data is organized inside a single 4KB block.
+#### Implements Slotted Page Structure.
+#### PageHeader(page_id, next_page_id, tuple_counts, free_space_pointer)
+### Key Functions:
+1. insertTuple(tuple)
+2. getTuple(slot_num, tuple)
+3. deleteTuple(slot_num)
+4. updateTuple(slot_num, tuple)
+5. getData() → raw page access
 
-Page (Slotted-Page): Instead of writing data sequentially, it uses a "Slot Directory" at the header. This allows you to move tuples around or resize them without breaking the pointers used by the rest of the database.
+#### Tuple: Represents a single row in a table. It is a container for multiple Field objects and handles its own serialization into bytes.
+#### Field: Represents a single column value, Store typed data (int, string, etc.), Provide serialization support.
 
-Tuple: Represents a single row in a table. It is a container for multiple Field objects and handles its own serialization into bytes.
-Field: The very basic building block of the table (has type, value and some meta data)
 
 ## 4. [Table](https://github.com/naderelfeel10/DB_storage_manager/tree/main/src/Storage/Table)
-The high-level API used by the user to interact with data.
+##### The high-level API used by the user to interact with data.
+##### Represents a table stored as a collection of pages.
 
-TableHeap: Represents the physical table. It manages a linked list of pages and provides the API for insert, update, and delete.
+### TableHeap:
+#### Key Functions:
+1. insertTuple(tuple) → returns RID
+2. updateTuple(rid, tuple)
+3. deleteTuple(rid)
+4. getTuple(rid)
+5. displayTablePages()
+6. printColumns()
 
-TableIterator: A pointer-like object that lets you step through every record in the table using ++ syntax, automatically jumping from one page to the next when it reaches the end of a slot directory.
 
-Column & RID: Column defines the schema (name and type), while RID (Record ID) is the unique "GPS coordinate" (PageID + SlotID) for every row.
+### TableIterator:
+##### Implements sequential table scan.
+#### Responsibilities:
+1. Iterate through tuples across pages
+#### Key Functions:
+1. operator++() → move to next tuple
+2. operator*() → access current tuple
+3. end() → check termination
 
-# Examples
+-----
 
+# Testing& Examples 
 ## 1.Create DataBase
 #### ->query : "create database testDB"
 ####   1. Disk Initialization: The DiskManager creates a physical file named testDB on the storage drive.
@@ -48,7 +97,7 @@ Column & RID: Column defines the schema (name and type), while RID (Record ID) i
    
 ## 2.CREATE TABLE
 ####  -> query : "create table User(user_id int, firstName varchar(30),lastName varchar(30), age int)"
-####      1. define the Cols used and pass them to TableHeap associated with the name of the file 
+####     1. define the Cols used and pass them to TableHeap associated with the name of the file 
 ####    <img width="1000" height="70" alt="image" src="https://github.com/user-attachments/assets/9fe80a38-c2d0-4948-958b-71497be12b61" />
 ####    <img width="1000" height="300" alt="image" src="https://github.com/user-attachments/assets/f1ae2603-c0d6-4e90-850a-aa03f0fc35ac" />
 ####    <img width="1000" height="300" alt="image" src="https://github.com/user-attachments/assets/489385c4-0cab-46e1-b392-c0d700bf6b4a" />
