@@ -102,7 +102,7 @@ Handles persistent storage of pages in a file.
 
 -----
 
-# Testing& Examples 
+# 6. [Testing&Examples](https://github.com/naderelfeel10/DB_Storage_Engine/blob/main/src/Storage/testTable_iterator.c%2B%2B)
 ## 1.Create DataBase
 #### ->query : "create database testDB"
 ####   1. Disk Initialization: The DiskManager creates a physical file named testDB on the storage drive.
@@ -162,7 +162,7 @@ Handles persistent storage of pages in a file.
 
 ## Near Future Roadmap
 #### [ ] B+ Tree Indexing: To allow O(logn) searching instead of full table scans.
-
+#### [] Linear& Extensible Hashing index : to solve the problem of doubling the size of static hash index
 ## Build & Development
 Prerequisites
 C++17 Compiler (GCC/Clang)
@@ -170,5 +170,5 @@ C++17 Compiler (GCC/Clang)
 Standard Template Library (STL)
 
 ### Compilation :
-g++ -std=c++17 -static Storage/testTable_iterator.c++  Storage/Table/TableIterator.c++ Storage/Table/TableHeap.c++ Storage/Table/RID.c++ Buffer/LRU_replacement.c++ Buffer/BufferPoolManager.c++ Storage/Disk/DiskManager.c++ Storage/Page/page.c++  Storage/Page/Field.c++ Storage/Table/Column.c++ Storage/Page/Tuple.c++ -g -o testTableIterator.exe
+g++ -std=c++17 -static \src\Storage\testTable_iterator.c++ \src\Storage\Table\TableIterator.c++ \src\Storage\Table\TableHeap.c++ \src\Storage\Table\RID.c++ \src\Buffer\LRU_replacement.c++ \src\Buffer\BufferPoolManager.c++ \src\Storage\Disk\DiskManager.c++ \src\Storage\Page\page.c++ \src\Storage\Page\Field.c++ \src\Storage\Table\Column.c++ \src\Storage\Page\Tuple.c++ \src\Storage\Indexing\StaticHashIndexWrapper.c++ \src\Storage\Indexing\static_hash_index.c++ -g -o iterator_test.exe
 
