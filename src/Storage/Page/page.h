@@ -37,7 +37,6 @@ class Page{
         //void deserializePage(char*buffer);
         char* getData();
 
-
 };
 
 #endif 

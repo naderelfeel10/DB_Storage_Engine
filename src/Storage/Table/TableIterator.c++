@@ -34,21 +34,24 @@ TableIterator& TableIterator::operator++(){
     int next_page_id_to_fetch = pageHeader->next_page_id;
     int next_slot_num_to_fetch = curr_rid_pointer.getActualPair().getSlotNum()+1;
 
-    /*
+    
     // stopping condition 
     if(stopping_rid.getActualPair().getPageId() != -1){
 
-        assert((curr_rid_pointer.getActualPair().getPageId() < stopping_rid.getActualPair().getPageId())
+        /*assert((curr_rid_pointer.getActualPair().getPageId() < stopping_rid.getActualPair().getPageId())
             ||
               ((curr_rid_pointer.getActualPair().getPageId() == stopping_rid.getActualPair().getPageId() )
          &&  (next_slot_num_to_fetch <= stopping_rid.getActualPair().getSlotNum()))
                         &&"iterator is out of bound error");
+                */
+        this->getCurrRIDPointer().setRID(-1,-1);
+             
 
     }
-*/
+
 
     // check if it's the last tuple in the page , so we fetch the upcomming one
-    if(pageHeader->num_tuples <= curr_rid_pointer.getActualPair().getSlotNum()){
+    if(next_slot_num_to_fetch >= pageHeader->num_tuples){
         this->curr_rid_pointer = RID(next_page_id_to_fetch, 0);// the first id in the next table_page
     }else{
 
@@ -58,6 +61,7 @@ TableIterator& TableIterator::operator++(){
     return *this;
 
 }
+
 
 Tuple TableIterator::operator*(){
     Tuple* tuple = this->Table_heap->getTuple(curr_rid_pointer);

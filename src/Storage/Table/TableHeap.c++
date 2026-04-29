@@ -117,7 +117,7 @@ void TableHeap::displayTablePages() {
     std::cout << "--- End of Table ---\n";
 }
 
-
+//saves table meta data at first_page of the table 
 void TableHeap::saveMetaData(){
 
     char buffer[PAGE_SIZE];
@@ -188,6 +188,37 @@ void TableHeap::printColumns(){
 }
 
 
+//indexes :
+void TableHeap::createIndex(indexes_t index_type, string col_name,int index_size){
+    Index* index;
+    switch (index_type)
+    {
+    case STATIC_HASH_INDEX:{
+        //now it's just int , i need to change this into FieldType and check the specific type then create the propper index
+
+        FieldType field_tye;
+        for(auto& col: this->cols){
+            if(col_name == col.getColName()){
+                field_tye = col.getField()->getFieldType();
+            }
+        }
+
+        hashIndex* h_index = new hashIndex(index_size);
+        index = new StaticHashIndexWrapper(h_index , col_name,field_tye); 
+        indexes_map[col_name].push_back(index);
+
+
+        Index_pages_struct* pages_struct = new Index_pages_struct();
+        indexes_pages_ids[pair(col_name, STATIC_HASH_INDEX)] = pages_struct;
+        
+        break;
+    }
+    
+    default:
+
+        break;
+    }
+}
 TableHeap::~TableHeap(){
     saveMetaData();
 }

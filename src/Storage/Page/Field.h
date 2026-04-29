@@ -35,13 +35,13 @@ public:
     void setValue(const char* value);
 
 
-    int getFieldValueInt();
-    float getFieldValueFloat();
-    bool getFieldValueBool();
-    const char* getFieldValueStr();
+    int getFieldValueInt()const;
+    float getFieldValueFloat()const;
+    bool getFieldValueBool()const;
+    const char* getFieldValueStr()const;
 
 
-    FieldType getFieldType() ;
+    FieldType getFieldType()const;
     bool isNull() ;
     int getSize() ;
     int getSerializedSize() const ;
@@ -50,6 +50,8 @@ public:
     void serialize(char* buffer);
     void deserialize(char* buffer);
     Field& operator=(const Field& other);
+
+    bool operator==(const Field& other)const;
 
 };
 

@@ -71,12 +71,9 @@ using namespace std;
 
         }
 
-        FieldType Field::getFieldType(){
+        FieldType Field::getFieldType()const{
             return this->fieldType;
         }
-
-
-
 
         bool Field::isNull()  { return is_null; }
         int Field::getSize() { return size; }
@@ -123,16 +120,16 @@ using namespace std;
     }
 
 
-int Field::getFieldValueInt() {
+int Field::getFieldValueInt()const {
     return VALUE_INT;
 }
-float Field::getFieldValueFloat() {
+float Field::getFieldValueFloat()const {
     return VALUE_FLOAT;
 }
-bool Field::getFieldValueBool() {
+bool Field::getFieldValueBool()const {
     return VALUE_BOOL;
 }
-const char* Field::getFieldValueStr() {
+const char* Field::getFieldValueStr()const {
     return VALUE_STRING;
 }
 
@@ -248,7 +245,6 @@ const char* Field::getFieldValueStr() {
 }
 
 
-
 void Field::setValue(int value){
     this->VALUE_INT = value;
     this->fieldType = TYPE_INT;
@@ -325,6 +321,33 @@ Field& Field::operator=(const Field& other) {
     return *this;
 }
 
+bool Field::operator==(const Field& other)const{
+
+    if(this->fieldType != other.getFieldType()) return false;
+
+    switch (other.getFieldType())
+    {
+    case TYPE_INT:
+        return (this->getFieldValueInt() == other.getFieldValueInt());
+        break;
+    
+    case TYPE_BOOL:
+        return (this->getFieldValueBool() == other.getFieldValueBool());
+        break;
+    
+    case TYPE_FLOAT:
+        return (this->getFieldValueFloat() == other.getFieldValueFloat());
+        break;
+
+    case TYPE_STRING:
+        return ( string(this->getFieldValueStr()) == string(other.getFieldValueStr()) );
+        break;
+
+    default:
+        return false;
+        break;
+    }
+}
 
 
 
@@ -380,5 +403,15 @@ int main(){
     f6->deserialize(buffer2);
     f6->print();
     delete f6;
+
+    //
+
+    Field dm_f1(TYPE_STRING,"nader");
+    Field dm_f2(TYPE_STRING,"nader");
+    if(dm_f1 == dm_f2){
+        cout<<"f1 = f2";
+    }else{
+        cout<<"f1 != f2";
+    }
 }
 */

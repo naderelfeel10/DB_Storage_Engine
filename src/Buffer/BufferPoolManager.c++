@@ -49,6 +49,7 @@ char* BufferPoolManager::fetchPage(int page_id){
         #endif
 
         int old_page_id = pages_ids[frame_id];
+        
         if(is_dirty[frame_id]){
             disk_manager->writePage(old_page_id, frames[frame_id]);
         }

@@ -3,6 +3,11 @@
 #include<algorithm>
 #include"Table/TableIterator.h"
 #include"Table/Column.h"
+#include"Indexing/Index.h"
+#include"Indexing/StaticHashIndexWrapper.h"
+#include<chrono>
+
+
 
 using namespace std;
 
@@ -76,14 +81,14 @@ main(){
 
     TableIterator table_iterator(table_heap,table_rids.front(), table_rids.back());
 
-
     string query4 = "select * from User where user_id=7";
 
     int user_id_value = 7;
 
     cout<<"displaying tuple with user_id = 7"<<endl;
 
-
+    auto st1 = chrono::high_resolution_clock::now();
+    
     for(; !table_iterator.end(); ++table_iterator){
         Tuple t =  *table_iterator;
 
@@ -97,6 +102,12 @@ main(){
             }
         }
     }
+    auto end1 = chrono::high_resolution_clock::now();
+
+
+    auto duration1 = chrono::duration_cast<chrono::microseconds>(end1 - st1);
+    cout << "searching using linear scan  duration: " << duration1.count() << " microseconds" << endl;
+
 
     //////
 
@@ -144,7 +155,7 @@ for (; !table_iterator.end(); ++table_iterator) {
 
 
 
-    //////
+    ////////////////////////////////////////////////////
 
     string query6 = "delete from User where user_id=8";
 
@@ -154,28 +165,28 @@ for (; !table_iterator.end(); ++table_iterator) {
 
 
     table_iterator = TableIterator(table_heap,table_rids.front(), table_rids.back());
-for (; !table_iterator.end(); ++table_iterator) {
 
-    Tuple t = *table_iterator; 
-    bool match = false;
+    for (; !table_iterator.end(); ++table_iterator) {
+
+        Tuple t = *table_iterator; 
+        bool match = false;
     
-        for(auto& f:t.fields){
+            for(auto& f:t.fields){
 
-            if(f.getFieldType() == TYPE_INT){
-                if(f.getFieldValueInt() == user_id_value){
-                    match = true;
+                if(f.getFieldType() == TYPE_INT){
+                    if(f.getFieldValueInt() == user_id_value){
+                        match = true;
+                    }
                 }
             }
+
+        if (match) {
+            RID curr_rid = table_iterator.getCurrRIDPointer();
+            table_heap->deleteTuple(curr_rid);
+            break;
+            cout<<"deleted successfuly"<<endl;
         }
-
-    if (match) {
-        RID curr_rid = table_iterator.getCurrRIDPointer();
-        table_heap->deleteTuple(curr_rid);
-        break;
-        cout<<"deleted successfuly"<<endl;
     }
-}
-
 
 
 cout<<"---------------------------------------"<<endl;
@@ -184,7 +195,72 @@ cout<<"---------------------------------------"<<endl;
     for(; !table_iterator.end(); ++table_iterator){
         Tuple t =  *table_iterator;
         t.print();
+        Field f(TYPE_INT, 3);
+        if(find(t.fields.begin(), t.fields.end(),f) != t.fields.end()){
+            cout<<"target field found"<<endl;
+        }else{
+            cout<<"target field not found"<<endl;
+        }
+            break;
     }
+
+
+    cout<<"================================================"<<endl;
+    cout<<"testing static hash iindex"<<endl;
+    cout<<"================================================"<<endl;
+
+    
+    //col1_name is "stu_id"
+    table_heap->createIndex(STATIC_HASH_INDEX,col1_name,12);
+
+    Index* static_hash_index_wrapper =  table_heap->indexes_map[col1_name][0];
+    table_iterator = TableIterator(table_heap,table_rids.front(), table_rids.back());
+
+    for(;!table_iterator.end();++table_iterator){
+
+        Tuple t = *table_iterator;
+        
+        int counter{0};
+        for(auto& col:table_heap->getCols()){
+            if(col.getColName()==col1_name){
+
+                col.getField()->print();
+                t.fields[counter].print();
+                static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Insert(t.fields[counter],col1_name,table_heap->getCols(),table_iterator.getCurrRIDPointer());
+                break;
+            }
+            counter++;
+
+        }
+    
+    }
+
+    cout<<"done"<<endl;
+
+    // cases when field is found
+    auto start = chrono::high_resolution_clock::now();
+    {
+        Field search_index1(TYPE_INT, 4);
+        RID search_index1_RID =  static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Search(search_index1);
+        cout<<"search_index1 RID : "<<"( "<<search_index1_RID.getPageId()<<", "<<search_index1_RID.getActualPair().getSlotNum()<<" )"<<endl;
+    }
+    auto end = chrono::high_resolution_clock::now();
+
+
+    auto duration = chrono::duration_cast<chrono::microseconds>(end - start);
+    cout << "searching using static hash index duration: " << duration.count() << " microseconds" << endl;
+
+
+    Field search_index2(TYPE_INT, 9);
+    RID search_index2_RID =  static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Search(search_index2);
+    cout<<"search_index2 RID : "<<"( "<<search_index2_RID.getPageId()<<", "<<search_index2_RID.getActualPair().getSlotNum()<<" )"<<endl;
+
+    // cases when field is not found should return (-1,-1)
+
+
+    Field search_index3(TYPE_INT, 79);
+    RID search_index3_RID =  static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Search(search_index3);
+    cout<<"search_index3 RID : "<<"( "<<search_index3_RID.getPageId()<<", "<<search_index3_RID.getActualPair().getSlotNum()<<" )"<<endl;
 
 
 }
