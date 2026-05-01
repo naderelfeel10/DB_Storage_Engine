@@ -1,6 +1,11 @@
 # Disk-Based DB Storage Engine
 
-##### A lightweight C++ database storage engine that demonstrates how data moves between memory and disk. It implements core components like a Buffer Pool Manager, Disk Manager, LRU replacement, and slotted-page storage. The project provides table-level abstractions with tuple operations and iteration, mimicking real database internals.
+
+
+##### A C++ database Storage Engine that simulates how real-world relational database systems manage data across memory and disk. Inspired by production-grade systems like PostgreSQL, it implements the full lifecycle of a record—from high-level tuple operations to low-level byte-level storage.
+##### The engine features a layered architecture including a Disk Manager for persistent storage, a Buffer Pool Manager with LRU replacement for efficient caching, and a slotted-page layout for compact data organization. It provides table-level abstractions with support for CRUD operations and sequential scans via iterators.
+##### To optimize data access, the system integrates both a static hash index for O(1) lookups and a B+ Tree index for O(log n) queries and efficient range scans. Overall, the project demonstrates how modern databases minimize disk I/O and improve performance through caching, indexing, and structured storage design.
+
 
 ## This project implements core database internals including:
 1. DiskManager:    handles reading/writing pages to disk.
@@ -160,10 +165,32 @@ Handles persistent storage of pages in a file.
 
 <img width="1464" height="524" alt="image" src="https://github.com/user-attachments/assets/ffab5a89-b80b-4010-8954-c35ad127843c" />
 
+## 9. B+ Tree Indexing 
+####    -> query = "CREATE INDEX idx_stu_id_btree ON User USING BTREE (stu_id);"
+####   using B+ tree index with O(logn) time complexity
+<img width="832" height="312" alt="image" src="https://github.com/user-attachments/assets/3bb2cf7f-6a1f-48db-beaf-a4a6c625f7d0" />
+
+## 10. B+tree vs Hash index in time complexity
+### 1. searching for user_id = 450 , out of 500 row
+<img width="1452" height="325" alt="image" src="https://github.com/user-attachments/assets/6d8aed6a-5965-403d-9c1d-2d891ea4b989" />
+<img width="1363" height="331" alt="image" src="https://github.com/user-attachments/assets/573368c8-cf62-4891-8388-5af18f78c836" />
+
+#### we can clearly see that hash index if faster in exact queries [O(1) vs O(logn)], (163Ms vs 211Ms)
+<img width="1593" height="482" alt="image" src="https://github.com/user-attachments/assets/26c6defb-5d17-4a7f-9f77-b2b4d8524ac1" />
+<img width="1607" height="452" alt="image" src="https://github.com/user-attachments/assets/1b0b8f42-ca1b-47bf-b96f-3b83f1c8e711" />
+
+### 1. searching for the range [4:400] user_id , out of 500 rows
+<img width="1310" height="433" alt="image" src="https://github.com/user-attachments/assets/1e816167-6e79-47b7-be1f-35c1b3616623" />
+<img width="1406" height="357" alt="image" src="https://github.com/user-attachments/assets/7b62c9e7-bda0-4596-898a-3139745149e1" />
+
+## here comes the advantage of B+ trees , with O( logn + k(range size) ), with sequetional access , vs hash index with O(k) , but all are random access wich makes it slower in range queries. (~86,000Ms, 80,000Ms ).
+<img width="1035" height="373" alt="image" src="https://github.com/user-attachments/assets/41bcdbaa-9fc9-43d9-ae57-0d7a1f8c49ce" />
+
 
 ## Near Future Roadmap
-#### [ ] B+ Tree Indexing: To allow O(logn) searching instead of full table scans.
-#### [] Linear& Extensible Hashing index : to solve the problem of doubling the size of static hash index
+#### [ ] Linear& Extensible Hashing index : to solve the problem of doubling the size of static hash index
+#### start Query Processing phase
+
 ## Build & Development
 Prerequisites
 C++17 Compiler (GCC/Clang)
@@ -171,5 +198,4 @@ C++17 Compiler (GCC/Clang)
 Standard Template Library (STL)
 
 ### Compilation :
-g++ -std=c++17 -static \src\Storage\testTable_iterator.c++ \src\Storage\Table\TableIterator.c++ \src\Storage\Table\TableHeap.c++ \src\Storage\Table\RID.c++ \src\Buffer\LRU_replacement.c++ \src\Buffer\BufferPoolManager.c++ \src\Storage\Disk\DiskManager.c++ \src\Storage\Page\page.c++ \src\Storage\Page\Field.c++ \src\Storage\Table\Column.c++ \src\Storage\Page\Tuple.c++ \src\Storage\Indexing\StaticHashIndexWrapper.c++ \src\Storage\Indexing\static_hash_index.c++ -g -o iterator_test.exe
-
+g++ -std=c++17 -static D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Indexing\BPlusTreeIndex.c++  D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\testTable_iterator.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Table\TableIterator.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Table\TableHeap.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Table\RID.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Buffer\LRU_replacement.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Buffer\BufferPoolManager.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Disk\DiskManager.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Page\page.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Page\Field.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Table\Column.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Page\Tuple.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Indexing\StaticHashIndexWrapper.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Indexing\static_hash_index.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Indexing\BPlusTreeIndexWrapper.c++ -g -o test_all.exe
