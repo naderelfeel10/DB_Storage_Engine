@@ -9,11 +9,11 @@
 4. Page & Tuple:    manage data layout inside pages.
 5. TableHeap:    provides table-level abstraction.
 6. TableIterator:    enables sequential scans.
-
+7. Indexing : enables index scan using staatic hash index in O(1)
 ---- 
 # System Architecture
 
-<img width="758" height="467" alt="image" src="https://github.com/user-attachments/assets/6942c2ec-85d8-404b-9b49-d963fbba99c0" />
+# <img width="623" height="620" alt="image" src="https://github.com/user-attachments/assets/6fad8a37-b5b0-4a63-ac1a-0467e01892a3" />
 
 
 ## 1. [Buffer](https://github.com/naderelfeel10/DB_storage_manager/tree/main/src/Buffer)
@@ -87,9 +87,22 @@ Handles persistent storage of pages in a file.
 2. operator*() → access current tuple
 3. end() → check termination
 
+## 5. [Indexing](https://github.com/naderelfeel10/DB_Storage_Engine/tree/main/src/Storage/Indexing)
+#### Static Hash Index for a custom Database Management System.
+#### It allows for near-constant time O(1) lookups of records based on specific column values, significantly outperforming linear table scans.
+
+### key functions:
+
+1. hashFunction(Field key): Calculates a bucket index by taking the hash of the field value modulo the current capacity.
+2. insertIndex(Field key, RID value): Inserts a new hashEntry into the calculated bucket.
+3. getValue(Field key): Searches the specific bucket and its overflow chain for a matching key.
+4. updateIndex(Field key, RID value): Finds an existing key in the index and updates its stored Record Identifier (RID).
+5. deleteIndex(Field key): Removes a key and its RID from the bucket chain, ensuring the linked list pointers are correctly reconnected.
+6. if capacity ratio is >= 0.75 , resize the old index into new one with double size.
+
 -----
 
-# Testing& Examples 
+# 6. [Testing&Examples](https://github.com/naderelfeel10/DB_Storage_Engine/blob/main/src/Storage/testTable_iterator.c%2B%2B)
 ## 1.Create DataBase
 #### ->query : "create database testDB"
 ####   1. Disk Initialization: The DiskManager creates a physical file named testDB on the storage drive.
@@ -131,11 +144,25 @@ Handles persistent storage of pages in a file.
 ####     <img width="360" height="358" alt="image" src="https://github.com/user-attachments/assets/d171d12a-02da-4c00-aa9d-fbdfdd62ab1f" />
 
 
+## 7. Hash indexing 
+####    -> query = "CREATE INDEX idx_stu_id_hash ON User USING HASH (stu_id)"
+####    using static hash index we search over the hash entries in O(1)
+<img width="871" height="191" alt="image" src="https://github.com/user-attachments/assets/bd17214b-9c68-487a-8c9b-9ff64e19fca0" />
+
+## 8. Linear scan vs static hash index in time complexity :
+### using linear scan on only 10 entries it took 2679 microseconds:
+
+<img width="1470" height="332" alt="image" src="https://github.com/user-attachments/assets/fb82adf0-73e3-4a04-b268-cdc65f199dc1" />
+<img width="663" height="152" alt="image" src="https://github.com/user-attachments/assets/bde4dcd4-c5a9-446f-9bda-c699da653fe7" />
+
+### using hash index  on same 10 entries it took 279 microseconds
+
+<img width="1464" height="524" alt="image" src="https://github.com/user-attachments/assets/ffab5a89-b80b-4010-8954-c35ad127843c" />
+
+
 ## Near Future Roadmap
 #### [ ] B+ Tree Indexing: To allow O(logn) searching instead of full table scans.
-#### [ ] Hashing Indexing: for a O(1) scans 
-
-
+#### [] Linear& Extensible Hashing index : to solve the problem of doubling the size of static hash index
 ## Build & Development
 Prerequisites
 C++17 Compiler (GCC/Clang)
@@ -143,5 +170,5 @@ C++17 Compiler (GCC/Clang)
 Standard Template Library (STL)
 
 ### Compilation :
-g++ -std=c++17 -static Storage/testTable_iterator.c++  Storage/Table/TableIterator.c++ Storage/Table/TableHeap.c++ Storage/Table/RID.c++ Buffer/LRU_replacement.c++ Buffer/BufferPoolManager.c++ Storage/Disk/DiskManager.c++ Storage/Page/page.c++  Storage/Page/Field.c++ Storage/Table/Column.c++ Storage/Page/Tuple.c++ -g -o testTableIterator.exe
+g++ -std=c++17 -static \src\Storage\testTable_iterator.c++ \src\Storage\Table\TableIterator.c++ \src\Storage\Table\TableHeap.c++ \src\Storage\Table\RID.c++ \src\Buffer\LRU_replacement.c++ \src\Buffer\BufferPoolManager.c++ \src\Storage\Disk\DiskManager.c++ \src\Storage\Page\page.c++ \src\Storage\Page\Field.c++ \src\Storage\Table\Column.c++ \src\Storage\Page\Tuple.c++ \src\Storage\Indexing\StaticHashIndexWrapper.c++ \src\Storage\Indexing\static_hash_index.c++ -g -o iterator_test.exe
 
