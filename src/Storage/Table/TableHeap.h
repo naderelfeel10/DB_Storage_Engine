@@ -13,6 +13,9 @@
 #include"../Indexing/Index.h"
 #include"../Indexing/StaticHashIndexWrapper.h"
 
+#include"../Indexing/BPlusTreeIndex.h"
+#include"../Indexing/BPlusTreeIndexWrapper.h"
+
 #include<memory>
 
 
@@ -23,7 +26,8 @@
 // 3.
 
 typedef enum{
-    STATIC_HASH_INDEX
+    STATIC_HASH_INDEX,
+    BPLUS_TREE_INDEX
 }indexes_t;
 
 struct Index_pages_struct{
@@ -39,7 +43,9 @@ class TableHeap{
         int first_page_id = -1;
         int last_page_id = -1;
         vector<Column> cols;
-        
+        // to do :
+        //number_of_tuples 
+
     public:
         // a map between col_name -> vector of indexes on this col ex : (HASH_Index, B+, ...)
         map<string, vector<Index*> > indexes_map;
@@ -51,11 +57,13 @@ class TableHeap{
         BufferPoolManager* BPM;
         TableHeap(BufferPoolManager* BPM);
         
+        //crud :
         RID insertTuple(Tuple tuple);
         RID updateTuple(RID rid, Tuple tuple);
         void deleteTuple(RID rid);
         Tuple* getTuple(RID rid);
 
+        
         void saveMetaData();
         void loadMetaData(); // to be impelemented
 

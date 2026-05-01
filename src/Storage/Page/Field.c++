@@ -83,41 +83,72 @@ using namespace std;
             return 1 + 1+ 4 + size; 
         }
 
-        void Field::print()  {
-            switch (fieldType) {
-                case TYPE_INT:
-                    cout <<"value : " << VALUE_INT<<endl;
-                    cout<<"size : "<<size<<endl;
-                    break;
+// making printing more readable
+/*
+void Field::print()  {
 
-                case TYPE_FLOAT: 
-                    if (this->is_null) {
-                        cout << "value : [NULL]" << endl;
-                        cout << "size : 0" << endl;
-                    } else {
-                        cout << "value : " << VALUE_FLOAT << endl;
-                        cout << "size : " << size << endl;
-                    }
-                    break;
+        switch (fieldType) {
+            case TYPE_INT:
+                cout <<"value : " << VALUE_INT<<endl;
+                cout<<"size : "<<size<<endl;
+                break;
 
-                case TYPE_STRING: 
-                    if (this->is_null) {
-                        cout << "value : [NULL]" << endl;
-                        cout << "size : 0" << endl;
-                    } else {
-                        cout << "value : " << VALUE_STRING << endl;
-                        cout << "size : " << size << endl;
-                    }
-                    break;
-
-                case TYPE_BOOL:   
-                    cout <<"value : " << VALUE_BOOL<<endl;
-                    cout<<"size : "<<size<<endl;
-                    break;
+            case TYPE_FLOAT: 
+                if (this->is_null) {
+                    cout << "value : [NULL]" << endl;
+                    cout << "size : 0" << endl;
+                } else {
+                    cout << "value : " << VALUE_FLOAT << endl;
+                    cout << "size : " << size << endl;
                 }
+                break;
 
-        cout << endl;
+            case TYPE_STRING: 
+                if (this->is_null) {
+                    cout << "value : [NULL]" << endl;
+                    cout << "size : 0" << endl;
+                } else {
+                    cout << "value : " << VALUE_STRING << endl;
+                    cout << "size : " << size << endl;
+                }
+                break;
+
+            case TYPE_BOOL:   
+                cout <<"value : " << VALUE_BOOL<<endl;
+                cout<<"size : "<<size<<endl;
+                break;
+
+        }
+    cout << endl;
+    
     }
+*/
+
+void Field::print() {
+    const int VAL_WIDTH = 15;
+    const int SIZE_WIDTH = 8;
+
+    // 1. Extract logic to a helper for better clarity
+    auto getDisplayValue = [&]() -> std::string {
+        if (this->is_null) return "[NULL]";
+
+        switch (fieldType) {
+            case TYPE_INT:    return std::to_string(VALUE_INT);
+            case TYPE_FLOAT:  return std::to_string(VALUE_FLOAT);
+            case TYPE_BOOL:   return (VALUE_BOOL ? "true" : "false");
+            case TYPE_STRING: return (VALUE_STRING ? VALUE_STRING : "[EMPTY]");
+            default:          return "??";
+        }
+    };
+
+    // 2. Format the output clearly
+    std::string displayValue = getDisplayValue();
+    int displaySize          = this->is_null ? 0 : this->size;
+
+    std::cout << "| " << std::left  << std::setw(VAL_WIDTH)  << displayValue 
+              << " | " << std::right << std::setw(SIZE_WIDTH) << displaySize 
+              << " |"  << std::endl;
+}
 
 
 int Field::getFieldValueInt()const {
@@ -133,7 +164,19 @@ const char* Field::getFieldValueStr()const {
     return VALUE_STRING;
 }
 
-    void Field::serialize(char buffer[]){
+
+FieldValue Field::getFieldValue()const{
+    if(this->fieldType == TYPE_INT) return this->getFieldValueInt();
+    if(this->fieldType == TYPE_FLOAT) return this->getFieldValueFloat();
+    if(this->fieldType == TYPE_BOOL) return this->getFieldValueBool();
+
+    return to_string(this->getFieldValueInt());
+
+}
+
+
+
+void Field::serialize(char buffer[]){
 
             int offset = 1;
             memcpy(buffer+offset,&size,sizeof(int));
@@ -349,7 +392,107 @@ bool Field::operator==(const Field& other)const{
     }
 }
 
+bool Field::operator>(const Field& other)const{
+    if(this == &other) return false;
+    if(this->fieldType != other.getFieldType()) return false;
+    
+    switch(other.fieldType){
+        case TYPE_INT:{
+            return (this->getFieldValueInt() > other.getFieldValueInt());
+            break;
+        }
+        case TYPE_FLOAT:{
+            return (this->getFieldValueFloat() > other.getFieldValueFloat());
+            break;
+        }
+        case TYPE_BOOL:{
+            return (this->getFieldValueBool() > other.getFieldValueBool());
+            break;
+        }
+        case TYPE_STRING:{
+            return (string(this->getFieldValueStr()) > string(other.getFieldValueStr()) );
+            break;
+        }
+        default:
+        return false;
+    }
+}
+bool Field::operator<(const Field& other)const{
+    if(this == &other) return false;
+    if(this->fieldType != other.getFieldType()) return false;
+    
+    switch(other.fieldType){
+        case TYPE_INT:{
+            return (this->getFieldValueInt() < other.getFieldValueInt());
+            break;
+        }
+        case TYPE_FLOAT:{
+            return (this->getFieldValueFloat() < other.getFieldValueFloat());
+            break;
+        }
+        case TYPE_BOOL:{
+            return (this->getFieldValueBool() < other.getFieldValueBool());
+            break;
+        }
+        case TYPE_STRING:{
+            return (string(this->getFieldValueStr()) < string(other.getFieldValueStr()) );
+            break;
+        }
+        default:
+        return false;
+    }
+}
+bool Field::operator>=(const Field& other)const{
+    if(this == &other) return true;
+    if(this->fieldType != other.getFieldType()) return false;
+    
+    switch(other.fieldType){
+        case TYPE_INT:{
+            return (this->getFieldValueInt() >= other.getFieldValueInt());
+            break;
+        }
+        case TYPE_FLOAT:{
+            return (this->getFieldValueFloat() >= other.getFieldValueFloat());
+            break;
+        }
+        case TYPE_BOOL:{
+            return (this->getFieldValueBool() >= other.getFieldValueBool());
+            break;
+        }
+        case TYPE_STRING:{
+            return (string(this->getFieldValueStr()) >= string(other.getFieldValueStr()) );
+            break;
+        }
+        default:
+        return false;
+    }
+}
 
+bool Field::operator<=(const Field& other)const{
+    if(this == &other) return true;
+    if(this->fieldType != other.getFieldType()) return false;
+    
+    switch(other.fieldType){
+        case TYPE_INT:{
+            return (this->getFieldValueInt() <= other.getFieldValueInt());
+            break;
+        }
+        case TYPE_FLOAT:{
+            return (this->getFieldValueFloat() <= other.getFieldValueFloat());
+            break;
+        }
+        case TYPE_BOOL:{
+            return (this->getFieldValueBool() <= other.getFieldValueBool());
+            break;
+        }
+        case TYPE_STRING:{
+            return (string(this->getFieldValueStr()) <= string(other.getFieldValueStr()) );
+            break;
+        }
+        default:
+        return false;
+    }
+}
 
 
 Field::~Field(){

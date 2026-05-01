@@ -23,7 +23,7 @@ BufferPoolManager::BufferPoolManager(DiskManager* dm){
 
 char* BufferPoolManager::fetchPage(int page_id){
     
-    cout<<"fetching page "<<page_id<<endl;
+    //cout<<"fetching page "<<page_id<<endl;
     int frame_id = -1;
 
     if(page_table.find(page_id) != page_table.end()){
@@ -68,8 +68,8 @@ char* BufferPoolManager::fetchPage(int page_id){
     disk_manager->readPage(page_id, buffer);
 
     PageHeader* header1 = reinterpret_cast<PageHeader*>(buffer);
-    cout<<"header 1 : "<<header1->page_id<<endl;
-    cout<<"header 1 : "<<header1->num_tuples<<endl;
+    //cout<<"header 1 : "<<header1->page_id<<endl;
+    //cout<<"header 1 : "<<header1->num_tuples<<endl;
 
     pages_ids[frame_id] = page_id;
     is_dirty[frame_id] = false;
@@ -114,7 +114,7 @@ int BufferPoolManager::newPage(){
     int new_page_id = (disk_manager->allocatePage())/PAGE_SIZE;
     disk_manager->readPage(new_page_id,frames[frame_id]);
 
-    cout<<"new page id :"<<new_page_id<<endl;
+    //cout<<"new page id :"<<new_page_id<<endl;
 
 
     pages_ids[frame_id] = new_page_id;

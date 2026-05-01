@@ -13,9 +13,11 @@ string Column::getColName(){return this->col_name;}
 Field* Column::getField(){return this->field;}
 
 
+
 void Column::serializeCol(char* buffer){
     int offset = 0;
     
+    // save some meta data
     memcpy(buffer, &this->col_max_size, sizeof(col_max_size));
     offset+=sizeof(col_max_size);
 
@@ -27,7 +29,7 @@ void Column::serializeCol(char* buffer){
     memcpy(buffer+offset, col_name.c_str(), col_name_size);
     offset += col_name_size;
 
-    
+    // then serialize the field itself
     this->field->serialize(buffer+offset);
     offset+=field->getSerializedSize();
 
@@ -37,6 +39,7 @@ void Column::serializeCol(char* buffer){
 void Column::deSerializeCol(char* buffer){
     int offset = 0;
     
+    // get meta data
     memcpy(&this->col_max_size, buffer+offset, sizeof(col_max_size));
     offset+=sizeof(col_max_size);
 
@@ -47,6 +50,7 @@ void Column::deSerializeCol(char* buffer){
     this->col_name.assign(buffer + offset, col_name_size);
     offset += col_name_size;
 
+    // get the actual field
     this->field->deserialize(buffer+offset);
 }
 
@@ -54,12 +58,14 @@ int Column::getColSize(){
     return (sizeof(this->col_max_size) +  sizeof(int) + this->col_name.length() + this->field->getSerializedSize() );
 }
 
-
+// c1 = c2;
+// operator overloading 
 Column& Column::operator=(const Column& other) {
     if (this == &other) return *this; 
 
     delete this->field;
 
+    // make a deep copy intp the new one
     this->col_name = other.col_name;
     this->col_max_size = other.col_max_size;
 
@@ -68,10 +74,27 @@ Column& Column::operator=(const Column& other) {
     return *this;
 }
 
-void Column::printCol(){
-    cout<<"Column name : "<<this->col_name<<endl;
-    cout<<"Column max size : "<<this->col_max_size;
-    this->field->print();
+// making printing more readable
+void Column::printCol() {
+    cout<<this->col_name <<endl;
+    cout<<"------------" <<endl;
+     
+    auto val = this->field->getFieldValue();
+
+    if (const int* i = get_if<int>(&val)) {
+        cout << *i;
+    } 
+    else if(const double* f = get_if<double>(&val)) {
+        cout << *f;
+    } 
+    else if(const bool* b = get_if<bool>(&val)) {
+        cout << (*b ? "true" : "false");
+    } 
+    else if(const std::string* s = get_if<std::string>(&val)) {
+        cout << *s;
+    }
+
+    cout << "\n------------" << endl;
 }
 
 /*

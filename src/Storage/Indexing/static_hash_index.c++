@@ -30,8 +30,8 @@ size_t hashIndex::hashFunction(Field key) {
                 // Use a standard hash for strings
                 raw_val = std::hash<string>{}(key.getFieldValueStr());
             }
-            cout<<"row value is : "<<raw_val <<endl;
-            cout<<"index slot is : "<<raw_val % capacity<<endl;
+            //cout<<"row value is : "<<raw_val <<endl;
+            //cout<<"index slot is : "<<raw_val % capacity<<endl;
             return raw_val % capacity;
         }
         
@@ -45,7 +45,7 @@ void hashIndex::insertIndex(Field key, RID value){
 
         key.print();
         size_t index = hashFunction(key); 
-        cout<<"index : "<<index<<endl;
+        //cout<<"index : "<<index<<endl;
             
         if(hashTable[index].has_value()){
 
@@ -55,10 +55,10 @@ void hashIndex::insertIndex(Field key, RID value){
             }
 
             curr_hash_entry->next = new hashEntry(key, value);
-            cout<<"inserted "<<endl;
+            //cout<<"inserted "<<endl;
                 
         }else{
-            cout<<"inserted into new hash entry "<<endl;
+            //cout<<"inserted into new hash entry "<<endl;
             hashTable[index] = hashEntry(key, value); 
         }
         number_of_entries++;
@@ -117,7 +117,6 @@ void hashIndex::deleteIndex(Field key){
         }
 
         }
-
 
 hashEntry* hashIndex::getHashEntryPtr(Field key){
             

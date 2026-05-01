@@ -5,6 +5,7 @@
 
 TableIterator::TableIterator(TableHeap* table_heap, RID starting_rid, RID stopping_rid){
     
+    // initialization
     this->Table_heap = table_heap;
     this->curr_rid_pointer = starting_rid;
     this->stopping_rid = stopping_rid;
@@ -31,6 +32,7 @@ TableIterator& TableIterator::operator++(){
     PageHeader* pageHeader = reinterpret_cast<PageHeader*>(page_buffer);
     Page* page = reinterpret_cast<Page*>(page_buffer);
     
+
     int next_page_id_to_fetch = pageHeader->next_page_id;
     int next_slot_num_to_fetch = curr_rid_pointer.getActualPair().getSlotNum()+1;
 
@@ -46,7 +48,6 @@ TableIterator& TableIterator::operator++(){
                 */
         this->getCurrRIDPointer().setRID(-1,-1);
              
-
     }
 
 
@@ -63,6 +64,7 @@ TableIterator& TableIterator::operator++(){
 }
 
 
+// get the curr tuple 
 Tuple TableIterator::operator*(){
     Tuple* tuple = this->Table_heap->getTuple(curr_rid_pointer);
     Tuple t = *tuple;
@@ -70,6 +72,7 @@ Tuple TableIterator::operator*(){
     return t;
 }
 
+// curr_rid is -1 when it reaches the end of the table 
 bool TableIterator::end(){
     return (this->curr_rid_pointer.getActualPair().getPageId() == -1);
 }

@@ -4,8 +4,11 @@
 #include <iostream>
 #include <variant>
 #include <cstring>
-
+#include <iomanip>
+using namespace std;
 enum FieldType { TYPE_INT, TYPE_STRING, TYPE_FLOAT, TYPE_BOOL };
+
+using FieldValue = variant<int, string, double, bool>;
 
 class Field {
 private:
@@ -27,6 +30,7 @@ public:
     Field(FieldType type, const char* value);
     Field(const Field& other);
     Field(FieldType type);
+    Field(){}
     ~Field();
 
     void setValue(int value);
@@ -40,8 +44,13 @@ public:
     bool getFieldValueBool()const;
     const char* getFieldValueStr()const;
 
+    FieldValue getFieldValue()const;
+
+
+
 
     FieldType getFieldType()const;
+
     bool isNull() ;
     int getSize() ;
     int getSerializedSize() const ;
@@ -49,9 +58,17 @@ public:
     void print() ;
     void serialize(char* buffer);
     void deserialize(char* buffer);
+
+
     Field& operator=(const Field& other);
 
     bool operator==(const Field& other)const;
+
+    bool operator>(const Field& other)const;
+    bool operator<(const Field& other)const;
+    bool operator>=(const Field& other)const;
+    bool operator<=(const Field& other)const;
+
 
 };
 

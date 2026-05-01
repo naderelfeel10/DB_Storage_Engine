@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include "../Page/Field.h"
+#include <variant>
 
 class Column{
 

@@ -14,7 +14,9 @@ void RID::setRID(int page_id, int slot_num){
     this->slot_num = slot_num;
 }
 
+//actual rids are needed when updating a tuple with into a new place
 void RID::updateActualPair(RID rid){
+
     this->actual_pair = pair(rid.getPageId(),rid.getSlotNum());
 }
 

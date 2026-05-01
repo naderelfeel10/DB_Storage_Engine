@@ -51,11 +51,13 @@ void  StaticHashIndexWrapper::Insert(Field&field,string col_name, vector<Column>
     //cout<<  
 }
 
-
+// delete a hash index wrapper over the original one
 void  StaticHashIndexWrapper::Delete(Field&field){
-
+    this->staticHashIndex->deleteIndex(field);
+    cout<<"field is deleted."<<endl;
 }
 
+// searching over the hash index
 RID  StaticHashIndexWrapper::Search(Field&field)const{
     return this->staticHashIndex->getValue(field);
 }

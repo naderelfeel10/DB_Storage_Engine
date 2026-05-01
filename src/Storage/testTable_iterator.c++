@@ -6,6 +6,8 @@
 #include"Indexing/Index.h"
 #include"Indexing/StaticHashIndexWrapper.h"
 #include<chrono>
+#include<cassert>
+#include"Indexing/BPlusTreeIndexWrapper.h"
 
 
 
@@ -63,7 +65,7 @@ main(){
     string query3 = "insert into User(user_id, firstName, lastName, age) values(0, \"nader\", \"elfeel\", 21.8);";
     
     vector<RID> table_rids;
-    for(int i=0;i<10;i++){
+    for(int i=0;i<500;i++){
     
         Field in1 = Field(TYPE_INT, i);
         Field in2 = Field(TYPE_STRING, "nader");
@@ -73,14 +75,17 @@ main(){
         Tuple t = Tuple({in1, in2, in3, in4});
         RID t_rid =  table_heap->insertTuple(t);
         table_rids.push_back(t_rid);
-        }
+
+    }
 
     Tuple* t1_res = table_heap->getTuple(table_rids[0]);
     t1_res->print();
     
+    
 
     TableIterator table_iterator(table_heap,table_rids.front(), table_rids.back());
 
+    /*
     string query4 = "select * from User where user_id=7";
 
     int user_id_value = 7;
@@ -203,15 +208,17 @@ cout<<"---------------------------------------"<<endl;
         }
             break;
     }
-
+*/
 
     cout<<"================================================"<<endl;
     cout<<"testing static hash iindex"<<endl;
     cout<<"================================================"<<endl;
 
     
+    string query7 = "CREATE INDEX idx_stu_id_hash ON User USING HASH (stu_id)";
+    
     //col1_name is "stu_id"
-    table_heap->createIndex(STATIC_HASH_INDEX,col1_name,12);
+    table_heap->createIndex(STATIC_HASH_INDEX,col1_name,600);
 
     Index* static_hash_index_wrapper =  table_heap->indexes_map[col1_name][0];
     table_iterator = TableIterator(table_heap,table_rids.front(), table_rids.back());
@@ -224,9 +231,103 @@ cout<<"---------------------------------------"<<endl;
         for(auto& col:table_heap->getCols()){
             if(col.getColName()==col1_name){
 
-                col.getField()->print();
+                //col.getField()->print();
                 t.fields[counter].print();
                 static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Insert(t.fields[counter],col1_name,table_heap->getCols(),table_iterator.getCurrRIDPointer());
+                break;
+            }
+            counter++;
+
+        }
+    
+    }
+
+
+    cout<<"done"<<endl;
+
+    // cases when field is found
+    auto start = chrono::high_resolution_clock::now();
+
+    {
+        Field search_index1(TYPE_INT, 450);
+        RID search_index1_RID =  static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Search(search_index1);
+        cout<<"search_index1 RID : "<<"( "<<search_index1_RID.getPageId()<<", "<<search_index1_RID.getActualPair().getSlotNum()<<" )"<<endl;
+    }
+
+    auto end = chrono::high_resolution_clock::now();
+    auto duration = chrono::duration_cast<chrono::microseconds>(end - start);
+    cout << "searching using static hash index duration: " << duration.count() << " microseconds" << endl;
+
+
+
+    Field search_index2(TYPE_INT, 200);
+    RID search_index2_RID =  static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Search(search_index2);
+    cout<<"search_index2 RID : "<<"( "<<search_index2_RID.getPageId()<<", "<<search_index2_RID.getActualPair().getSlotNum()<<" )"<<endl;
+
+    
+    // cases when field is not found should return (-1,-1)
+
+    Field search_index3(TYPE_INT, 7191);
+    RID search_index3_RID =  static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Search(search_index3);
+    cout<<"search_index3 RID : "<<"( "<<search_index3_RID.getPageId()<<", "<<search_index3_RID.getActualPair().getSlotNum()<<" )"<<endl;
+    assert(search_index3_RID.getActualPair().getPageId() == -1 && search_index3_RID.getActualPair().getSlotNum() == -1);
+
+
+    // test delete hash index
+    static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Delete(search_index2);
+
+    // try to search again
+    search_index2_RID =  static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Search(search_index2);
+    cout<<"search_index2 RID : "<<"( "<<search_index2_RID.getActualPair().getPageId()<<", "<<search_index2_RID.getActualPair().getSlotNum()<<" )"<<endl;
+    assert(search_index2_RID.getActualPair().getPageId() == -1 && search_index2_RID.getActualPair().getSlotNum() == -1);
+
+
+    table_iterator = TableIterator(table_heap, table_rids.front(), table_rids.back());
+
+    start = chrono::high_resolution_clock::now();
+
+    {
+        for(int i=4;i<=400;i++){
+            Field f(TYPE_INT, i);
+            RID rid = static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Search(f);
+            cout<<"search_index1 RID : "<<"( "<<rid.getPageId()<<", "<<rid.getActualPair().getSlotNum()<<" )"<<endl;
+        }
+                
+    }
+
+    end = chrono::high_resolution_clock::now();
+    duration = chrono::duration_cast<chrono::microseconds>(end - start);
+    cout << "searching in range 4:400 using static hash index  duration: " << duration.count() << " microseconds" << endl;
+
+
+
+    
+    cout<<"================================================"<<endl;
+    cout<<"testing B plus Tree  iindex"<<endl;
+    cout<<"================================================"<<endl;
+
+    table_heap->createIndex(BPLUS_TREE_INDEX, col1_name, 8);
+
+    for(auto& i:table_heap->indexes_map){
+        cout<<i.first<<" ";
+        for(auto& h:i.second)cout<<h<<" ";
+        cout<<endl;
+    }
+    Index* B_plusTreeIndex = table_heap->indexes_map[col1_name][1];
+    table_iterator = TableIterator(table_heap,table_rids.front(), table_rids.back());
+
+
+    for(;!table_iterator.end();++table_iterator){
+
+        Tuple t = *table_iterator;
+        
+        int counter{0};
+        for(auto& col:table_heap->getCols()){
+            if(col.getColName()==col1_name){
+
+                //col.getField()->print();
+                t.fields[counter].print();
+                static_cast<BPlusTreeIndexWrapper*>(B_plusTreeIndex)->Insert(t.fields[counter],col1_name,table_heap->getCols(),table_iterator.getCurrRIDPointer());
                 break;
             }
             counter++;
@@ -238,29 +339,30 @@ cout<<"---------------------------------------"<<endl;
     cout<<"done"<<endl;
 
     // cases when field is found
-    auto start = chrono::high_resolution_clock::now();
+    auto start2 = chrono::high_resolution_clock::now();
+
     {
-        Field search_index1(TYPE_INT, 4);
-        RID search_index1_RID =  static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Search(search_index1);
+        Field search_index1(TYPE_INT, 450);
+        RID search_index1_RID =  static_cast<BPlusTreeIndexWrapper*>(B_plusTreeIndex)->Search(search_index1);
         cout<<"search_index1 RID : "<<"( "<<search_index1_RID.getPageId()<<", "<<search_index1_RID.getActualPair().getSlotNum()<<" )"<<endl;
     }
-    auto end = chrono::high_resolution_clock::now();
 
+    auto end2 = chrono::high_resolution_clock::now();
+    auto duration2 = chrono::duration_cast<chrono::microseconds>(end2 - start2);
+    cout << "searching using B plus tree index duration: " << duration2.count() << " microseconds" << endl;
 
-    auto duration = chrono::duration_cast<chrono::microseconds>(end - start);
-    cout << "searching using static hash index duration: " << duration.count() << " microseconds" << endl;
+    
+     start2 = chrono::high_resolution_clock::now();
 
-
-    Field search_index2(TYPE_INT, 9);
-    RID search_index2_RID =  static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Search(search_index2);
-    cout<<"search_index2 RID : "<<"( "<<search_index2_RID.getPageId()<<", "<<search_index2_RID.getActualPair().getSlotNum()<<" )"<<endl;
-
-    // cases when field is not found should return (-1,-1)
-
-
-    Field search_index3(TYPE_INT, 79);
-    RID search_index3_RID =  static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Search(search_index3);
-    cout<<"search_index3 RID : "<<"( "<<search_index3_RID.getPageId()<<", "<<search_index3_RID.getActualPair().getSlotNum()<<" )"<<endl;
-
-
+    {
+        Field lower_index(TYPE_INT, 4);
+        Field upper_index(TYPE_INT, 400);
+        
+        vector<RID> search_index_RIDs =  static_cast<BPlusTreeIndexWrapper*>(B_plusTreeIndex)->searchRange(lower_index, upper_index);
+        for(auto& rid: search_index_RIDs)
+        cout<<"search_index1 RID : "<<"( "<<rid.getPageId()<<", "<<rid.getActualPair().getSlotNum()<<" )"<<endl;
+    }
+    end2 = chrono::high_resolution_clock::now();
+    duration2 = chrono::duration_cast<chrono::microseconds>(end2 - start2);
+    cout << "searching in range 4:400 using B plus tree index duration: " << duration2.count() << " microseconds" << endl;
 }

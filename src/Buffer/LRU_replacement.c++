@@ -64,8 +64,10 @@ void LRU::put_frame(int key, char* value){
 }
 
 char* LRU::get_frame(int key){
+
         if(frames_map.find(key) != frames_map.end()){
             Frame* target_node = frames_map[key];
+            
             target_node->prev->next = target_node->next;
             target_node->next->prev = target_node->prev;
 
