@@ -9,7 +9,8 @@
 4. Page & Tuple:    manage data layout inside pages.
 5. TableHeap:    provides table-level abstraction.
 6. TableIterator:    enables sequential scans.
-7. Indexing : enables index scan using staatic hash index in O(1)
+7. Static hash index for constant time access O(1)
+8. B+ Tree Index for O(logn) time access
 ---- 
 # System Architecture
 
