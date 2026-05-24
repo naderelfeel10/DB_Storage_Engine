@@ -9,11 +9,9 @@
 #include<cassert>
 #include"Indexing/BPlusTreeIndexWrapper.h"
 
-
-
 using namespace std;
 
-
+/*
 int 
 main(){
 
@@ -30,7 +28,7 @@ main(){
     
     string table_name = "User";
     tables.push_back(table_name);
-    
+
     string col1_name = "user_id";
     string col2_name = "firstName";  
     string col3_name = "lastName";
@@ -52,6 +50,7 @@ main(){
     Column col4 = Column(f4,col4_name,sizeof(int));
 
     TableHeap* table_heap = new TableHeap(BPM);
+    dm->addTable(table_name,table_heap->get_first_page_id());
     
     vector<Column> cols = {col1, col2, col3, col4};
     table_heap->setCols(cols);
@@ -85,7 +84,7 @@ main(){
 
     TableIterator table_iterator(table_heap,table_rids.front(), table_rids.back());
 
-    /*
+    
     string query4 = "select * from User where user_id=7";
 
     int user_id_value = 7;
@@ -125,7 +124,7 @@ main(){
 
 
     table_iterator = TableIterator(table_heap,table_rids.front(), table_rids.back());
-for (; !table_iterator.end(); ++table_iterator) {
+    for (; !table_iterator.end(); ++table_iterator) {
 
     Tuple t = *table_iterator; 
     bool match = false;
@@ -208,7 +207,7 @@ cout<<"---------------------------------------"<<endl;
         }
             break;
     }
-*/
+
 
     cout<<"================================================"<<endl;
     cout<<"testing static hash iindex"<<endl;
@@ -250,7 +249,7 @@ cout<<"---------------------------------------"<<endl;
 
     {
         Field search_index1(TYPE_INT, 450);
-        RID search_index1_RID =  static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Search(search_index1);
+        RID search_index1_RID =  static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Search(search_index1)[0];
         cout<<"search_index1 RID : "<<"( "<<search_index1_RID.getPageId()<<", "<<search_index1_RID.getActualPair().getSlotNum()<<" )"<<endl;
     }
 
@@ -261,14 +260,14 @@ cout<<"---------------------------------------"<<endl;
 
 
     Field search_index2(TYPE_INT, 200);
-    RID search_index2_RID =  static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Search(search_index2);
+    RID search_index2_RID =  static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Search(search_index2)[0];
     cout<<"search_index2 RID : "<<"( "<<search_index2_RID.getPageId()<<", "<<search_index2_RID.getActualPair().getSlotNum()<<" )"<<endl;
 
     
     // cases when field is not found should return (-1,-1)
 
     Field search_index3(TYPE_INT, 7191);
-    RID search_index3_RID =  static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Search(search_index3);
+    RID search_index3_RID =  static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Search(search_index3)[0];
     cout<<"search_index3 RID : "<<"( "<<search_index3_RID.getPageId()<<", "<<search_index3_RID.getActualPair().getSlotNum()<<" )"<<endl;
     assert(search_index3_RID.getActualPair().getPageId() == -1 && search_index3_RID.getActualPair().getSlotNum() == -1);
 
@@ -277,7 +276,7 @@ cout<<"---------------------------------------"<<endl;
     static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Delete(search_index2);
 
     // try to search again
-    search_index2_RID =  static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Search(search_index2);
+    search_index2_RID =  static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Search(search_index2)[0];
     cout<<"search_index2 RID : "<<"( "<<search_index2_RID.getActualPair().getPageId()<<", "<<search_index2_RID.getActualPair().getSlotNum()<<" )"<<endl;
     assert(search_index2_RID.getActualPair().getPageId() == -1 && search_index2_RID.getActualPair().getSlotNum() == -1);
 
@@ -289,7 +288,7 @@ cout<<"---------------------------------------"<<endl;
     {
         for(int i=4;i<=400;i++){
             Field f(TYPE_INT, i);
-            RID rid = static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Search(f);
+            RID rid = static_cast<StaticHashIndexWrapper*>(static_hash_index_wrapper)->Search(f)[0];
             cout<<"search_index1 RID : "<<"( "<<rid.getPageId()<<", "<<rid.getActualPair().getSlotNum()<<" )"<<endl;
         }
                 
@@ -343,7 +342,7 @@ cout<<"---------------------------------------"<<endl;
 
     {
         Field search_index1(TYPE_INT, 450);
-        RID search_index1_RID =  static_cast<BPlusTreeIndexWrapper*>(B_plusTreeIndex)->Search(search_index1);
+        RID search_index1_RID =  static_cast<BPlusTreeIndexWrapper*>(B_plusTreeIndex)->Search(search_index1)[0];
         cout<<"search_index1 RID : "<<"( "<<search_index1_RID.getPageId()<<", "<<search_index1_RID.getActualPair().getSlotNum()<<" )"<<endl;
     }
 
@@ -366,3 +365,4 @@ cout<<"---------------------------------------"<<endl;
     duration2 = chrono::duration_cast<chrono::microseconds>(end2 - start2);
     cout << "searching in range 4:400 using B plus tree index duration: " << duration2.count() << " microseconds" << endl;
 }
+*/

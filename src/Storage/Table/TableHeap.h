@@ -21,7 +21,7 @@
 
 
 // todo : 
-// 1.serialzation and deserialization of indexes
+// 1.serialzation and deserialization of indexes (hash done)
 // 2.create table schema
 // 3.
 
@@ -34,6 +34,8 @@ struct Index_pages_struct{
     int index_first_page_id;
     int index_last_page_id;
     Index_pages_struct():index_first_page_id(-1),index_last_page_id(-1){}
+    Index_pages_struct(int f, int l):index_first_page_id(f),index_last_page_id(l){}
+
 };
 
 class TableHeap{
@@ -41,10 +43,11 @@ class TableHeap{
     private:
         string table_name;
         int first_page_id = -1;
-        int last_page_id = -1;
+        int last_page_id = -1; 
         vector<Column> cols;
-        // to do :
-        //number_of_tuples 
+        int num_of_tuples{0};
+        RID starting_rid = RID(-1,-1);
+        RID stopping_rid = RID(-1,-1);
 
     public:
         // a map between col_name -> vector of indexes on this col ex : (HASH_Index, B+, ...)
@@ -53,9 +56,8 @@ class TableHeap{
         // for each pair of (col_name, index_type) we have a struct of first_page_id , last_page_id of this specific index 
         map< pair<string,indexes_t>, Index_pages_struct*> indexes_pages_ids;
         
-
         BufferPoolManager* BPM;
-        TableHeap(BufferPoolManager* BPM);
+        TableHeap(BufferPoolManager* BPM,int first_page_id, int last_page_id);
         
         //crud :
         RID insertTuple(Tuple tuple);
@@ -72,14 +74,21 @@ class TableHeap{
 
         string getTableName();
         void setTableName(string table_name);
-        
+        int get_first_page_id(){return this->first_page_id;}
+        int get_last_page_id(){return this->last_page_id;}
+
+        void set_first_page_id(int p_id){ this->first_page_id = p_id;}
+        void set_last_page_id(int p_id){ this->last_page_id = p_id;}
+
+        RID getStartingRID(){return this->starting_rid;}
+        RID getStoppigRID(){return this->stopping_rid;}
+
         void displayTablePages();
         void printColumns();
 
-        //
         void createIndex(indexes_t index_type, string string,int index_size);
-
-
+        Index* getIndex(string col_name, indexes_t index_type);
+        Tuple getTupleFromRID(RID rid);
         ~TableHeap();
 
 };

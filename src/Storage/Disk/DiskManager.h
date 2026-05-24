@@ -20,26 +20,28 @@ struct __attribute__((packed)) DirectoryEntry{
 struct __attribute__((packed)) DBHeader {
     int capacity = FILE_CAPACITY;
     int map_size{0};        
-    int deleted_size{0};    
+    int deleted_size{0};
+    int number_of_tables{0}; 
 };
 
 
 class DiskManager{
-
-    private:
+    public:
+    //private:
         DBHeader header;
         string file_name;
         unordered_map<int, size_t> pages_table;
         vector<size_t> deleted_slots;
+        // to do : add a map of<table_name, his first page id>
+        unordered_map<string, int>tables_names; // from first page of the table i can deserialize the whole table 
 
         void resizeFile();        
         auto getFileSize(const string&file_name);
     
         
-    public:
+    //public:
         fstream DB_file;
         DiskManager(const string&file_name);
-        ~DiskManager();
         void saveMetaData();
         void loadMetaData();
         void writePage(int page_id, const char*data);
@@ -47,6 +49,12 @@ class DiskManager{
         void deletePage(int page_id);
         size_t allocatePage();
         size_t getSize();
+
+        void addTable(string table_name, int first_page_id);
+        void removeTable(string table_name);
+
+        void printDiskMeta();
+        ~DiskManager();
         
 
 

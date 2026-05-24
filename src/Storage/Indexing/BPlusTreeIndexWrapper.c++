@@ -13,6 +13,8 @@ void BPlusTreeIndexWrapper::Insert(Field&field,string col_name, vector<Column> t
     this->BPlusTreeIndex->insert(field,rid);
 }
 
+
+
 void BPlusTreeIndexWrapper::Delete(Field&field){
     if(field.getFieldType() != this->field_type){
         cerr<<"field types don't match"<<endl;
@@ -22,11 +24,12 @@ void BPlusTreeIndexWrapper::Delete(Field&field){
 
 }
 
-RID  BPlusTreeIndexWrapper::Search(Field&field)const{
+
+vector<RID>  BPlusTreeIndexWrapper::Search(Field&field)const{
 
     if(field.getFieldType() != this->field_type){
         cerr<<"field types don't match"<<endl;
-        return RID(-1,-1);
+        //return RID(-1,-1);
     }
     return (this->BPlusTreeIndex->findValue(field));
 

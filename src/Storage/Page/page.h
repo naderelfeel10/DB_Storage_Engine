@@ -33,9 +33,12 @@ class Page{
         bool getTuple(int slot_num,Tuple& tuple);
         bool deleteTuple(int slot_num);
         int updateTuple(int slot_num, Tuple new_tuple);
-        //void serializePage(char*buffer);
-        //void deserializePage(char*buffer);
         char* getData();
+        // to do : add same functions for indexes
+        //int insertData( char* buffer); // parameter is a serialized form of any thing to add
+        int insertData(char* buffer, uint16_t raw_size);
+        bool getIndexData(int slot_num, char*& buffer);
+        
 
 };
 

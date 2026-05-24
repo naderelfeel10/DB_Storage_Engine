@@ -10,12 +10,15 @@ class Column{
 
     private:
         Field* field;
+        FieldType field_type;
         std::string col_name;
         int col_max_size;
 
     public:
 
-        Column(const Field* field, std::string col_name,int col_max_size);
+        Column(const Field* field, string col_name,int col_max_size);
+        Column(FieldType f_type, string col_name,int col_max_size):field(nullptr),field_type(f_type),col_name(col_name),col_max_size(col_max_size){};
+        Column(){}
         std::string getColName();
         Field* getField();
 
@@ -25,7 +28,7 @@ class Column{
         Column& operator=(const Column& other);
 
         int getColSize();
-
+        FieldType getColType(){return this->field_type;}
         void printCol();
 
 };

@@ -178,21 +178,23 @@ void BufferPoolManager::unpinPage(int page_id, bool is_dirty_flag) {
 
 
 BufferPoolManager::~BufferPoolManager(){
-
+    cout<<"deleting BPM"<<endl;
     for(int i{};i<BUFFER_SIZE;i++){
 
         int page_id = pages_ids[i];
 
         if(pin_count[i] > 0) {
-            std::cerr <<"Warning: Page" << pages_ids[i] 
+            cerr <<"Warning: Page"<<pages_ids[i] 
                       <<" still has "<<pin_count[i]<<" pins during shutdown."<<endl;
         }
 
         if(is_dirty[i] && page_id != -1)
             disk_manager->writePage(page_id, frames[i]);
 
-        delete[] frames[i];
+        if(frames[i]!=nullptr)
+            delete[] frames[i];
     }
+    cout<<"BPM is deleted"<<endl;
 
 }
 

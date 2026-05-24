@@ -53,7 +53,8 @@ void Tuple::deserialize(char* buffer){
         fields.clear();
         while(offset<tulpe_size){
             Field tmp(TYPE_INT);
-            tmp.deserialize(buffer+offset); 
+            tmp.deserialize(buffer+offset);
+            //tmp.print();
             fields.push_back(tmp);
             offset+=tmp.getSerializedSize();
         }

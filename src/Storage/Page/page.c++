@@ -30,8 +30,6 @@ int Page::insertTuple(Tuple tuple){
     uint16_t free_size = header->free_space_pointer - ( sizeof(PageHeader) + (header->num_tuples)*sizeof(Slot));
 
 
-
-
     // if not return -1
     if(free_size < (tuple_size + sizeof(Slot)) ){
         return -1;
@@ -48,10 +46,62 @@ int Page::insertTuple(Tuple tuple){
 
     header->num_tuples++;
 
-
     return (header->num_tuples -1);
 
 }
+/*
+// to do : implement this function
+int Page::insertData(char* buffer){
+
+    uint16_t entry_size= strlen(buffer);
+    //cout<<strlen(buffer)<<endl;
+    entry_size = (entry_size+7)& ~7;
+
+    PageHeader* header = reinterpret_cast<PageHeader*>(this->data);
+    if( (header->free_space_pointer - (sizeof(header)+ (header->num_tuples + 1)*sizeof(Slot))) < entry_size ){
+        return -1;
+    }
+    header->free_space_pointer -= (uint16_t)entry_size;
+    memcpy(data+header->free_space_pointer,buffer, entry_size);
+    
+    Slot* slots = reinterpret_cast<Slot*>(data+sizeof(PageHeader));
+    slots[header->num_tuples].offset = (uint16_t)header->free_space_pointer;
+    slots[header->num_tuples].size = (uint16_t)entry_size;
+
+    header->num_tuples++;
+
+    return (header->num_tuples -1);
+}
+*/
+// Added entry_size parameter to prevent binary data truncation from strlen
+int Page::insertData(char* buffer, uint16_t raw_size) {
+    uint16_t aligned_entry_size = (raw_size + 7) & ~7;
+
+    PageHeader* header = reinterpret_cast<PageHeader*>(this->data);
+    
+    uint16_t slot_array_end = sizeof(PageHeader) + ((header->num_tuples + 1) * sizeof(Slot));
+    
+    if (header->free_space_pointer < slot_array_end || 
+        (header->free_space_pointer - slot_array_end) < aligned_entry_size) {
+        return -1; 
+    }
+
+    header->free_space_pointer -= aligned_entry_size;
+    
+    memcpy(this->data + header->free_space_pointer, buffer, raw_size);
+    
+    if (aligned_entry_size > raw_size) {
+        memset(this->data + header->free_space_pointer + raw_size, 0, aligned_entry_size - raw_size);
+    }
+    
+    Slot* slots = reinterpret_cast<Slot*>(this->data + sizeof(PageHeader));
+    slots[header->num_tuples].offset = header->free_space_pointer;
+    slots[header->num_tuples].size = aligned_entry_size;
+
+    header->num_tuples++;
+    return (header->num_tuples - 1);
+}
+
 
 // should pass slot num and empty tuple by reference
 bool Page::getTuple(int slot_num, Tuple& tuple){
@@ -64,6 +114,10 @@ bool Page::getTuple(int slot_num, Tuple& tuple){
     int offset = slots[slot_num].offset;
     tuple.deserialize(data+ offset);
 
+    if(tuple.get_is_deleted()){
+        cout<<"tuple is deleted!"<<endl;
+        return false;
+    }
     if(slots[slot_num].id_deleted == true){
         cout<<"tuple deleted!"<<endl;
         return false;
@@ -72,7 +126,23 @@ bool Page::getTuple(int slot_num, Tuple& tuple){
     return true;
 
 }
+bool Page::getIndexData(int slot_num, char*& buffer){
+    PageHeader* header = reinterpret_cast<PageHeader*>(data);
+    
+    if(slot_num < 0 || slot_num >= header->num_tuples){
+        return false;
+    }
+    Slot* slots = reinterpret_cast<Slot*>(data+sizeof(PageHeader));
+    int offset = slots[slot_num].offset;
+    buffer = data+offset;
 
+    if(slots[slot_num].id_deleted == true){
+        cout<<"index deleted!"<<endl;
+        return false;
+    }
+        
+    return true;
+}
 bool Page::deleteTuple(int slot_num){
     PageHeader* header = reinterpret_cast<PageHeader*>(data);
     

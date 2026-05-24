@@ -10,21 +10,36 @@
 
 
 
-class BPlusTreeIndexWrapper: public Index{
+class BPlusTreeIndexWrapper:public Index{
     private:
-        BPlusTree* BPlusTreeIndex;
         string col_name;
         FieldType field_type;
     
     public:
+        BPlusTree* BPlusTreeIndex;
         BPlusTreeIndexWrapper(BPlusTree* index, string col_name, FieldType field_type):
             BPlusTreeIndex(index),col_name(col_name),field_type(field_type){}
 
         void Insert(Field&field,string col_name, vector<Column> tuple_cols, RID rid)override;
         void Delete(Field&field)override;
-        RID Search(Field&field)const override;
-        vector<RID> searchRange(Field lower, Field upper);
 
+        vector<RID> Search(Field&field)const override;
+        //RID Search(Field&field)const;
+
+        vector<RID> searchRange(Field lower, Field upper);
+        void displayIndexPages(){
+            this->BPlusTreeIndex->printTree();
+        };
+
+    ~BPlusTreeIndexWrapper() {
+        this->BPlusTreeIndex->saveBPlusTree();
+        cout<<"saving B+ tree"<<endl;
+        if (this->BPlusTreeIndex->root != nullptr) {
+            BPlusTreeIndex->clear(this->BPlusTreeIndex->root);
+            this->BPlusTreeIndex->root = nullptr;
+    }
+    
+}
 
 };
 

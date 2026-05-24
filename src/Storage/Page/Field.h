@@ -8,6 +8,19 @@
 using namespace std;
 enum FieldType { TYPE_INT, TYPE_STRING, TYPE_FLOAT, TYPE_BOOL };
 
+inline string getFieldTypeasString(FieldType type){
+    switch (type)
+    {
+    case TYPE_INT:return "TYPE_INT";
+    case TYPE_STRING:return "TYPE_STRING";
+    case TYPE_FLOAT:return "TYPE_FLOAT";
+    case TYPE_BOOL:return "TYPE_BOOL";
+    default:
+        break;
+    }
+    return "NULL";
+}
+
 using FieldValue = variant<int, string, double, bool>;
 
 class Field {
@@ -45,10 +58,6 @@ public:
     const char* getFieldValueStr()const;
 
     FieldValue getFieldValue()const;
-
-
-
-
     FieldType getFieldType()const;
 
     bool isNull() ;

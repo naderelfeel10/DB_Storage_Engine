@@ -3,6 +3,7 @@
 
 #include<iostream>
 #include<utility>
+#include<cassert>
 #include "../Page/page.h"
 
 class RID{
@@ -19,6 +20,10 @@ class RID{
         int getPageId();
         int getSlotNum();
 
+        void serialize(char* data);
+        void deserialize(char* data);
+        int getSerializedSize();
+        void print();
 
 };
 #endif

@@ -3,6 +3,7 @@
 #include<cstring>
 #include<fstream>
 #include<filesystem>
+#include<cassert>
 
 #include"DiskManager.h"
 using namespace std;
@@ -21,12 +22,13 @@ DiskManager::DiskManager(const string&file_name){
         }else{
             cout<<"new file is created successfuly"<<endl;
         }
+        filesystem::resize_file(file_name, header.capacity*PAGE_SIZE);
         saveMetaData();
     }else{
+
         cout<<"file is opened successfuly"<<endl;
         loadMetaData();
     }
-    filesystem::resize_file(file_name, header.capacity*PAGE_SIZE);
 
 }
 
@@ -40,31 +42,38 @@ void DiskManager::saveMetaData(){
     int offset = 0;
     char buffer[PAGE_SIZE];
     memset(buffer,0,PAGE_SIZE);
-    /*
-    memcpy(buffer+offset,&header.capacity,sizeof(header.capacity));
-    offset+=sizeof(header.capacity);
 
     header.map_size =static_cast<int>(pages_table.size());
-    memcpy(buffer+offset,&header.map_size,sizeof(header.map_size));
-    offset+=sizeof(header.map_size);
-
     header.deleted_size =static_cast<int>(deleted_slots.size());
-    memcpy(buffer+offset,&header.deleted_size,sizeof(header.deleted_size));
-    offset+=sizeof(header.deleted_size);
-    */
-    header.map_size =static_cast<int>(pages_table.size());
-    header.deleted_size =static_cast<int>(deleted_slots.size());
+    header.number_of_tables = static_cast<int>(tables_names.size());
 
     memcpy(buffer+offset, &header, sizeof(DBHeader));
     offset+=sizeof(DBHeader);
 
+    // save page table
     for(auto &[id, off] : pages_table){
         DirectoryEntry entry = {id, off};
         memcpy(buffer+offset, &entry, sizeof(DirectoryEntry));
         offset+=sizeof(DirectoryEntry);
-        cout<<"page "<<entry.page_id<<" saved ."<<endl;
+        //cout<<"page "<<entry.page_id<<" saved ."<<endl;
     }
 
+    // save tables_names map :
+    for(auto &table:tables_names){
+        //save name length
+        int name_size = table.first.size();
+        memcpy(buffer+ offset, &name_size, sizeof(int));
+        offset+=sizeof(int);
+
+        //save actual name
+        memcpy(buffer+ offset, table.first.c_str(), name_size);
+        offset+=name_size;
+        //save page_id
+        memcpy(buffer+ offset, &table.second, sizeof(int));
+        offset+=sizeof(int);
+    }
+
+    // save deleted_slots for upcomming reuse
     for(size_t slot:deleted_slots){
         memcpy(buffer+offset, &slot,sizeof(slot));
         offset+=sizeof(slot);
@@ -81,40 +90,26 @@ void DiskManager::saveMetaData(){
 
 void DiskManager::loadMetaData(){
 
-    cout<<"loader meta data"<<endl;
+    cout<<"loading meta data"<<endl;
     char buffer[PAGE_SIZE];
     DB_file.clear();
     DB_file.seekg(0,ios::beg);
     DB_file.read(buffer, PAGE_SIZE);
-    
 
     int offset = 0;
-
-    /*
-    DBHeader* header = reinterpret_cast<DBHeader*>(buffer);
-    int capacity;
-    memcpy(&capacity, buffer+offset,sizeof(capacity));
-    offset+=sizeof(capacity);
-
-    int map_size;
-    memcpy(&map_size, buffer+offset,sizeof(map_size));
-    offset+=sizeof(map_size);
-
-    int deleted_size;
-    memcpy(&deleted_size, buffer+offset,sizeof(deleted_size));
-    offset+=sizeof(deleted_size);
-
-    header->capacity = capacity;
-    header->map_size = map_size;
-    header->deleted_size = deleted_size;
-    */
-
-
     memcpy(&this->header,buffer+offset, sizeof(DBHeader));
     offset+= sizeof(DBHeader);
 
-    cout<<"file header size : "<< header.map_size<<endl;
+    cout<<"meta data of dm : "<<endl;
+    cout<<header.number_of_tables<<endl;
+    cout<<header.map_size<<endl;
+    cout<<header.capacity<<endl;
+    cout<<header.deleted_size<<endl;
+    cout<<"===================================================="<<endl;
 
+
+
+    //cout<<"file header size : "<< header.map_size<<endl;
 
     pages_table.clear();
     for(int i{};i<header.map_size;i++){
@@ -122,9 +117,29 @@ void DiskManager::loadMetaData(){
         memcpy(&entry,buffer+offset, sizeof(DirectoryEntry));
         pages_table[entry.page_id] = entry.offset;
         offset+=sizeof(DirectoryEntry);
-        cout<<"page "<<entry.page_id<<" loaded ."<<endl;
+        //cout<<"page "<<entry.page_id<<" loaded ."<<endl;
     }
-    cout<<"loader pages_dir"<<endl;
+    //cout<<"loader pages_dir"<<endl;
+
+    tables_names.clear();
+    for(int i=0;i<header.number_of_tables;i++){
+        int name_size ;
+        memcpy(&name_size, buffer+offset, sizeof(int));
+        offset+=sizeof(int);
+       
+        string table_name(buffer + offset, name_size);
+        offset += name_size;
+
+        int page_id{-1};
+        memcpy(&page_id, buffer+offset, sizeof(int));
+        offset+=sizeof(int);
+
+        this->tables_names[table_name] = page_id;
+    }
+    for(auto& [name, p_id]:this->tables_names){
+        cout<<name<<" :  "<<p_id<<endl;
+    }
+
 
     deleted_slots.clear();
     for(int i{};i<header.deleted_size;i++){
@@ -133,6 +148,7 @@ void DiskManager::loadMetaData(){
         deleted_slots.push_back(tmp);
         offset+=sizeof(tmp);
     }
+    
 
 }
 
@@ -148,17 +164,16 @@ void DiskManager::writePage(int page_id, const char* data){
     if(pages_table.find(page_id)!= pages_table.end()){
         offset = pages_table[page_id];
     }else{
-        //offset = allocatePage();
-        return;
+        offset = allocatePage();
     }
 
-    cout<<"offset : "<<offset<<endl;
+    //cout<<"offset : "<<offset<<endl;
     DB_file.seekp(offset);
     DB_file.write(data, PAGE_SIZE);
     pages_table[page_id] = offset;
 
     DB_file.flush();
-    cout<<"written successfuly" <<endl;   
+    //cout<<"written successfuly" <<endl;   
 }
 
 
@@ -166,8 +181,9 @@ void DiskManager::writePage(int page_id, const char* data){
 
 
 void DiskManager::readPage(int page_id, char*data){
-    cout<<"reading page "<<page_id<<endl;
+    //cout<<"reading page "<<page_id<<endl;
     if (pages_table.find(page_id) == pages_table.end()) {
+        cout<<"page not found"<<endl;
         return; 
     }
 
@@ -241,12 +257,36 @@ size_t DiskManager::getSize() {
     return (pages_table.size()+deleted_slots.size())*PAGE_SIZE;
 }
 
+
+// add table into the map
+void DiskManager::addTable(string table_name, int first_page_id){
+    this->header.number_of_tables++;
+    //this->tables_names.insert(pair(table_name, first_page_id));
+    this->tables_names[table_name] = first_page_id;
+}
+// remove table into the map
+void DiskManager::removeTable(string table_name){
+    this->header.number_of_tables--;
+    this->tables_names.erase(table_name);
+}
+
+void DiskManager::printDiskMeta(){
+    cout<<this->file_name<<endl;
+    for(auto& t:tables_names){
+        cout<<t.first<<endl;
+        cout<<t.second<<endl;
+    }
+
+}
+
 DiskManager::~DiskManager(){
+    cout<<"saving dm"<<endl;
     if(DB_file.is_open()){
         DB_file.clear();
         saveMetaData();
         DB_file.close();
     }
+    cout<<"dm is saved"<<endl;
 }
 
 
@@ -337,12 +377,67 @@ void testExpansion() {
 }
 
 
+void test_save_load(){
+    
+    DiskManager dm("diskMngDB");
+    
+    for(int i = 1; i < 50; i++) {
+        Page p(i);
+        //dm.writePage(i, p.getData());
+    }
+    //dm.tables_names["User"] = 71;
+    //dm.tables_names["Student"] = 18;
+
+    
+    char* p1_buffer = new char[PAGE_SIZE];
+    dm.readPage(4,p1_buffer);
+    PageHeader* p1_header = reinterpret_cast<PageHeader*>(p1_buffer);
+    cout<<"retrieving page 4 : "<< p1_header->page_id<<endl;
+    assert(p1_header->page_id == 4);
+
+    dm.~DiskManager();
+    
+
+    DiskManager dm2("diskMngDB");
+    dm2.printDiskMeta();
+
+}
 /*
 int main(){
     //test1();
     //testPersistence();
-    //testDeletionAndReuse();
     //testExpansion();
+    //test_save_load();
+
+
+    //testing presistance in DM (passed successfuly)
+    
+    DiskManager* dm = new DiskManager("diskMngDB");
+    Page* page1 = new Page(1);
+
+    Field* f1 = new Field(TYPE_INT, 1);
+    Field* f2 = new Field(TYPE_INT, 2);
+    Field* f3 = new Field(TYPE_INT, 3);
+    
+    Tuple* t1 = new Tuple({*f1,*f2,*f3});
+    
+    page1->insertTuple(*t1);
+    page1->insertTuple(*t1);
+    page1->insertTuple(*t1);
+    page1->insertTuple(*t1);
+
+    dm->writePage(1, page1->getData());
+    dm->addTable("Users",1);
+
+    delete dm;
+
+    DiskManager* dm2 = new DiskManager("diskMngDB");
+    cout<<"File name : "<<dm2->file_name<<endl;
+    cout<<"map size : "<<dm2->header.map_size<<endl;
+    
+    for(auto& [name,id]:dm2->tables_names){
+        cout<<name<<" - "<<id<<endl;
+    }
 
 }
 */

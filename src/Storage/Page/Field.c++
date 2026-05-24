@@ -176,14 +176,14 @@ FieldValue Field::getFieldValue()const{
 
 
 
-void Field::serialize(char buffer[]){
+void Field::serialize(char* buffer){
 
-            int offset = 1;
-            memcpy(buffer+offset,&size,sizeof(int));
-            offset+=sizeof(int);
+        int offset = 1;
+        memcpy(buffer+offset,&this->size,sizeof(int));
+        offset+=sizeof(int);
 
-            memcpy(buffer+offset,&is_null,sizeof(bool));
-            offset+=1;
+        memcpy(buffer+offset,&this->is_null,sizeof(bool));
+        offset+=1;
         switch (fieldType)
         {
         case TYPE_INT:{
@@ -242,7 +242,7 @@ void Field::serialize(char buffer[]){
     }
 
 
-    void Field::deserialize(char buffer[]){
+    void Field::deserialize(char* buffer){
         char type = buffer[0];
         int offset = 1;
         
@@ -338,7 +338,7 @@ void Field::setValue(const char* value) {
 
 
 
-
+/*
 Field& Field::operator=(const Field& other) {
     if (this == &other) return *this;
 
@@ -359,6 +359,49 @@ Field& Field::operator=(const Field& other) {
         this->VALUE_INT = other.VALUE_INT;
         this->VALUE_FLOAT = other.VALUE_FLOAT;
         this->VALUE_BOOL = other.VALUE_BOOL;
+    }
+
+    return *this;
+}
+*/
+Field& Field::operator=(const Field& other) {
+    if (this == &other) return *this;
+
+    // 1. SAFELY delete the string ONLY if the current type actually WAS a string
+    if (this->fieldType == TYPE_STRING && this->VALUE_STRING != nullptr) {
+        delete[] this->VALUE_STRING;
+        this->VALUE_STRING = nullptr;
+    }
+
+    // 2. Copy metadata flags
+    this->fieldType = other.fieldType;
+    this->size = other.size;
+    this->is_null = other.is_null;
+
+    // 3. Copy the union data safely based STRICTLY on the source type tag
+    if (!other.is_null) {
+        switch (other.fieldType) {
+            case TYPE_STRING:
+                if (other.VALUE_STRING != nullptr) {
+                    this->VALUE_STRING = new char[other.size + 1];
+                    memcpy((void*)this->VALUE_STRING, other.VALUE_STRING, other.size + 1);
+                } else {
+                    this->VALUE_STRING = nullptr;
+                }
+                break;
+                
+            case TYPE_INT:
+                this->VALUE_INT = other.VALUE_INT; // Only write to the active variant
+                break;
+                
+            case TYPE_FLOAT:
+                this->VALUE_FLOAT = other.VALUE_FLOAT;
+                break;
+                
+            case TYPE_BOOL:
+                this->VALUE_BOOL = other.VALUE_BOOL;
+                break;
+        }
     }
 
     return *this;

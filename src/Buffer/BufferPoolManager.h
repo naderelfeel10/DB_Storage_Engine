@@ -39,13 +39,13 @@ class BufferPoolManager{
     public:
         DiskManager* disk_manager;
         BufferPoolManager(DiskManager* dm);
-        ~BufferPoolManager();
         char* fetchPage(int page_id);
         int newPage();
 
         void deletePage(int page_id);
         void unpinPage(int page_id, bool is_dirty_flag);
         void markAsDirty(int page_id);
+        ~BufferPoolManager();
 
 
 
