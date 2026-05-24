@@ -2,9 +2,8 @@
 
 
 
-##### A C++ database Storage Engine that simulates how real-world relational database systems manage data across memory and disk. Inspired by production-grade systems like PostgreSQL, it implements the full lifecycle of a record—from high-level tuple operations to low-level byte-level storage.
-##### The engine features a layered architecture including a Disk Manager for persistent storage, a Buffer Pool Manager with LRU replacement for efficient caching, and a slotted-page layout for compact data organization. It provides table-level abstractions with support for CRUD operations and sequential scans via iterators.
-##### To optimize data access, the system integrates both a static hash index for O(1) lookups and a B+ Tree index for O(log n) queries and efficient range scans. Overall, the project demonstrates how modern databases minimize disk I/O and improve performance through caching, indexing, and structured storage design.
+A lightweight disk-based relational database storage engine implemented in modern C++, designed to simulate the internal architecture of real-world DBMS systems like PostgreSQL. The engine implements core database components including a Disk Manager, Buffer Pool Manager with LRU replacement, slotted-page storage, persistent table heaps, and tuple serialization. It supports CRUD operations, sequential scans, static hash indexing for O(1) lookups, and B+ Tree indexing for efficient O(log n) queries and range scans. All tables, metadata, and indexes are fully persistent on disk and can be reconstructed after restarting the system. The project demonstrates how modern databases optimize storage, minimize disk I/O, and accelerate query execution through caching and indexing techniques.
+
 
 
 ## This project implements core database internals including:
@@ -187,9 +186,93 @@ Handles persistent storage of pages in a file.
 <img width="1035" height="373" alt="image" src="https://github.com/user-attachments/assets/41bcdbaa-9fc9-43d9-ae57-0d7a1f8c49ce" />
 
 
+# 11. Persistence & Database Recovery
+### Fully Persistent Disk-Based Storage
+### The storage engine is fully persistent.
+### All database components including:
+
+- Tables
+- Tuples
+- Page layouts
+- Metadata
+- Static Hash Indexes
+- B+ Tree Indexes
+
+### are serialized and stored on disk pages inside the database file.
+
+### After restarting the application, the entire database can be reconstructed directly from disk without rebuilding indexes or reinserting records.
+
+## Persistence Architecture
+### 1. Table Metadata Serialization
+#### Each TableHeap stores metadata including:
+- void saveMetaData();
+- void loadMetaData();
+
+The metadata allows the engine to reconstruct table state after restarting the DBMS.
+
+## 2. Persistent Static Hash Index
+
+The Static Hash Index is fully serialized into disk pages.
+
+### Each hash bucket entry stores:
+- void serializeHashIndex(char* data);
+- void deserializeHashIndex(char* data);
+
+This allows hash indexes to survive process termination and reload instantly on startup.
+
+## 3. Persistent B+ Tree Index
+
+The B+ Tree implementation persists every tree node to disk pages.
+
+### Each node stores:
+- void saveBPlusTree();
+- void saveNode(Node* node);
+- void loadBPlusTree();
+- Node* loadNode(int page_id);
+
+Internal nodes and leaf nodes are recursively reconstructed from disk pages during database startup.
+
+### This simulates how production-grade database systems persist index structures.
+
+## Database Reload Workflow
+
+### When the engine starts:
+
+### 1. Open Existing Database File
+DiskManager* dm = new DiskManager(DB_name);
+
+#### The DiskManager loads:
+
+database headers
+table directory
+page mappings
+
+#### 2. Reload TableHeap Objects
+   TableHeap* loaded_table = new TableHeap(BPM, dm->tables_names["User"], -1);
+   loaded_table->loadMetaData();
+
+##### The table reconstructs:
+schema
+page chain
+tuple boundaries
+index metadata
+
+#### 3. Reload Indexes Automatically
+for(auto& [col_name, indexes_vec] : loaded_table->indexes_map)
+
+##### The engine dynamically restores:
+- Static Hash Indexes
+- B+ Tree Indexes
+
+### After loading:
+
+- all tuples are accessible
+- indexes remain functional
+- CRUD operations continue normally
+
 ## Near Future Roadmap
-#### [ ] Linear& Extensible Hashing index : to solve the problem of doubling the size of static hash index
-#### start Query Processing phase
+### Query Executor
+
 
 ## Build & Development
 Prerequisites
@@ -198,4 +281,10 @@ C++17 Compiler (GCC/Clang)
 Standard Template Library (STL)
 
 ### Compilation :
-g++ -std=c++17 -static D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Indexing\BPlusTreeIndex.c++  D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\testTable_iterator.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Table\TableIterator.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Table\TableHeap.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Table\RID.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Buffer\LRU_replacement.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Buffer\BufferPoolManager.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Disk\DiskManager.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Page\page.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Page\Field.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Table\Column.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Page\Tuple.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Indexing\StaticHashIndexWrapper.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Indexing\static_hash_index.c++ D:\SWE\DB\CMU\CMU_PROJECT\DB_Storage_manager\src\Storage\Indexing\BPlusTreeIndexWrapper.c++ -g -o test_all.exe
+1. insert some data through test_multiple_tables.c++ in test dir :
+
+g++ -std=c++17 -static D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Buffer\BufferPoolManager.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Buffer\LRU_replacement.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Disk\DiskManager.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Indexing\BPlusTreeIndex.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Indexing\BPlusTreeIndexWrapper.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Indexing\static_hash_index.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Indexing\StaticHashIndexWrapper.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Page\Field.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Page\page.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Page\Tuple.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Table\Column.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Table\RID.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Table\TableHeap.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Table\TableIterator.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\test\test_table_load_store.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\test\test_multiple_tables.c++ -g -o test_multiple_tables.exe
+
+2. then test loaded file using : test_loading_DB.c++ inside test dir:
+
+g++ -std=c++17 -static D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Buffer\BufferPoolManager.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Buffer\LRU_replacement.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Disk\DiskManager.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Indexing\BPlusTreeIndex.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Indexing\BPlusTreeIndexWrapper.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Indexing\static_hash_index.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Indexing\StaticHashIndexWrapper.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Page\Field.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Page\page.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Page\Tuple.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Table\Column.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Table\RID.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Table\TableHeap.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Table\TableIterator.c++ D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\test\test_table_load_store.c++  D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\test\test_loading_DB.c++ -g -o test_loading_DB.exe 
