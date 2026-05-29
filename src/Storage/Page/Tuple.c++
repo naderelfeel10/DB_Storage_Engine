@@ -11,7 +11,7 @@ Tuple::Tuple(vector<Field> fields){
     }
 
 }
-
+/*
 void Tuple::print(){
         cout<<"is deleted << "<<this->get_is_deleted()<<endl;
         cout<<"tuple size << "<<this->tulpe_size<<endl;
@@ -20,6 +20,23 @@ void Tuple::print(){
             field.print();
     }
 }
+*/
+// a better way to print
+void Tuple::print() {
+    // Optional: Hide metadata unless you specifically need it for debugging
+
+    // Start of row boundary
+    std::cout << "| ";
+
+    // Print every field side-by-side on the exact same row terminal stream
+    for (auto& field : this->fields) {
+        field.print();
+    }
+
+    // Now that the entire row is fully printed, break to the next line
+    std::cout << std::endl;
+}
+
 int Tuple::getTupleSize() const {
     int total = 1 + sizeof(int);
     for (const auto& field : fields) {

@@ -31,36 +31,23 @@ TableIterator& TableIterator::operator++(){
     char* page_buffer = this->Table_heap->BPM->fetchPage(curr_rid_pointer.getActualPair().getPageId());
     PageHeader* pageHeader = reinterpret_cast<PageHeader*>(page_buffer);
     Page* page = reinterpret_cast<Page*>(page_buffer);
-    
 
     int next_page_id_to_fetch = pageHeader->next_page_id;
     int next_slot_num_to_fetch = curr_rid_pointer.getActualPair().getSlotNum()+1;
-
     
     // stopping condition 
     if(stopping_rid.getActualPair().getPageId() != -1){
-
-        /*assert((curr_rid_pointer.getActualPair().getPageId() < stopping_rid.getActualPair().getPageId())
-            ||
-              ((curr_rid_pointer.getActualPair().getPageId() == stopping_rid.getActualPair().getPageId() )
-         &&  (next_slot_num_to_fetch <= stopping_rid.getActualPair().getSlotNum()))
-                        &&"iterator is out of bound error");
-                */
-        this->getCurrRIDPointer().setRID(-1,-1);
-             
+        this->getCurrRIDPointer().setRID(-1,-1);      
     }
-
 
     // check if it's the last tuple in the page , so we fetch the upcomming one
     if(next_slot_num_to_fetch >= pageHeader->num_tuples){
-        this->curr_rid_pointer = RID(next_page_id_to_fetch, 0);// the first id in the next table_page
+        this->curr_rid_pointer = RID(next_page_id_to_fetch, 0);//the first id in the next table_page
     }else{
-
         this->curr_rid_pointer = RID(curr_rid_pointer.getActualPair().getPageId(), next_slot_num_to_fetch);
     }
 
     return *this;
-
 }
 
 

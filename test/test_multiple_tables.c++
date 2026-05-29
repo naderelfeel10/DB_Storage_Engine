@@ -29,7 +29,7 @@ void createUserTable(BufferPoolManager* BPM, string table_name){
 
     int t1_first_page_id{-1};
     if(BPM->disk_manager->tables_names.find(table_name) != BPM->disk_manager->tables_names.end()){
-        cout << table_name << " found in the database" << endl;
+        cout << table_name << "found in the database" << endl;
         t1_first_page_id = BPM->disk_manager->tables_names[table_name];
     }
 
@@ -43,7 +43,7 @@ void createUserTable(BufferPoolManager* BPM, string table_name){
 
 void insertIntoUserTable(){
     cout << "--- Inserting 10 records into User table ---" << endl;
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 1000; i++) {
 
         Field u1 = Field(TYPE_INT, 100 + i);                
         Field u2 = Field(TYPE_STRING, ("First_" + to_string(i)).c_str());
@@ -82,7 +82,7 @@ void createProductTable(BufferPoolManager* BPM, string table_name){
 
 void insertIntoProductTable(){
     cout << "\n--- Inserting 10 records into Product table ---" << endl;
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 1000; i++) {
         Field p1 = Field(TYPE_INT, 500 + i);                
         Field p2 = Field(TYPE_STRING, ("Product_" + to_string(i)).c_str());
         Field p3 = Field(TYPE_FLOAT, static_cast<float>(10.5 * (i + 1)));
@@ -119,7 +119,7 @@ void createOrderTable(BufferPoolManager* BPM, string table_name){
 
 void insertIntoOrderTable(){
 cout << "\n--- Inserting 10 records into Order table ---" << endl;
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 1000; i++) {
         Field o1 = Field(TYPE_INT, 9000 + i);          
         Field o2 = Field(TYPE_INT, 100 + i);                
         Field o3 = Field(TYPE_FLOAT, static_cast<float>(150.75 + (i * 20.5))); 
@@ -291,7 +291,6 @@ int main(){
     
     DiskManager* dm = new DiskManager(DB_name);
     BufferPoolManager* BPM = new BufferPoolManager(dm);
-
 
     // 1. User (user_id int, firstName varchar(30), lastName varchar(30), age int)
     createUserTable(BPM, "User");

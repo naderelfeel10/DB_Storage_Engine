@@ -89,6 +89,9 @@ class TableHeap{
         void createIndex(indexes_t index_type, string string,int index_size);
         Index* getIndex(string col_name, indexes_t index_type);
         Tuple getTupleFromRID(RID rid);
+
+        int getColIndex(string col_name);
+    
         ~TableHeap();
 
 };

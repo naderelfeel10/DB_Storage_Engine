@@ -105,14 +105,14 @@ void  StaticHashIndexWrapper::Insert(Field&field,string col_name, vector<Column>
         // lets try to reinsert
         int new_slot_num = newPage->insertData(entry_data,entry_size);
      
-        cout<<"hashEntry is inserted successfuly, "<< new_page_id<<" "<<new_slot_num<<endl;
+        //cout<<"hashEntry is inserted successfuly, "<< new_page_id<<" "<<new_slot_num<<endl;
         
     }
     // i need to find the prev entry and update it's next
 
 
     BPM->markAsDirty(this->staticHashIndex->get_last_pageid());
-    cout<<"hashEntry is inserted successfuly, "<< this->staticHashIndex->get_last_pageid()<<" "<<slot_num<<endl;
+    //cout<<"hashEntry is inserted successfuly, "<< this->staticHashIndex->get_last_pageid()<<" "<<slot_num<<endl;
 
 
     // insert also to the hash index
@@ -122,7 +122,7 @@ void  StaticHashIndexWrapper::Insert(Field&field,string col_name, vector<Column>
 
 // delete a hash index wrapper over the original one
 void  StaticHashIndexWrapper::Delete(Field&field){
-    
+
     this->staticHashIndex->deleteIndex(field);
     cout<<"field is deleted."<<endl;
 }

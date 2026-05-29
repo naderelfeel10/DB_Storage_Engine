@@ -23,6 +23,9 @@ BufferPoolManager::BufferPoolManager(DiskManager* dm){
 
 char* BufferPoolManager::fetchPage(int page_id){
     
+    if(page_id ==-1){
+        return nullptr;
+    }
     //cout<<"fetching page "<<page_id<<endl;
     int frame_id = -1;
 

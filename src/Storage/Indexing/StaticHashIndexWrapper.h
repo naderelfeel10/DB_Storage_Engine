@@ -27,6 +27,7 @@ class StaticHashIndexWrapper: public Index{
         vector<RID>  Search(Field&field)const override;
         void displayIndexPages();
         ~StaticHashIndexWrapper();
+        string get_index_col_name(){return this->col_name;}
         
 };
 

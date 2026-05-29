@@ -15,6 +15,7 @@ Field* Column::getField(){return this->field;}
 
 
 
+
 void Column::serializeCol(char* buffer){
     
     cout<<"serializing col"<<endl;

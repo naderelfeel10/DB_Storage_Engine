@@ -447,6 +447,16 @@ void TableHeap::setCols(vector<Column> cols){
     this->cols = std::move(cols);
 }
 
+int TableHeap::getColIndex(string col_name){
+    int index{0};
+    for(auto&col:this->cols){
+        if(col.getColName()==col_name){
+            return index;
+        }
+        index++;
+    }
+    return index;
+}
 
 string TableHeap::getTableName(){
     cout<<this->table_name<<endl;

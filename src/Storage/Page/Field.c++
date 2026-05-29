@@ -123,7 +123,7 @@ void Field::print()  {
     
     }
 */
-
+/*
 void Field::print() {
     const int VAL_WIDTH = 15;
     const int SIZE_WIDTH = 8;
@@ -148,6 +148,28 @@ void Field::print() {
     std::cout << "| " << std::left  << std::setw(VAL_WIDTH)  << displayValue 
               << " | " << std::right << std::setw(SIZE_WIDTH) << displaySize 
               << " |"  << std::endl;
+}*/
+
+// a better way to print
+void Field::print() {
+    const int VAL_WIDTH = 15;
+
+    // 1. Convert value to raw string display form
+    auto getDisplayValue = [&]() -> std::string {
+        if (this->is_null) return "[NULL]";
+
+        switch (fieldType) {
+            case TYPE_INT:    return std::to_string(VALUE_INT);
+            case TYPE_FLOAT:  return std::to_string(VALUE_FLOAT);
+            case TYPE_BOOL:   return (VALUE_BOOL ? "true" : "false");
+            case TYPE_STRING: return (VALUE_STRING ? VALUE_STRING : "[EMPTY]");
+            default:          return "??";
+        }
+    };
+
+    // 2. Print value flat on the SAME line (Notice: NO std::endl here!)
+    std::string displayValue = getDisplayValue();
+    std::cout << std::left << std::setw(VAL_WIDTH) << displayValue << " | ";
 }
 
 

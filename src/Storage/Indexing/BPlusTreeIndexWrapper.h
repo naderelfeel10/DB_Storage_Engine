@@ -30,14 +30,15 @@ class BPlusTreeIndexWrapper:public Index{
         void displayIndexPages(){
             this->BPlusTreeIndex->printTree();
         };
+        string get_index_col_name(){return this->col_name;}
 
-    ~BPlusTreeIndexWrapper() {
-        this->BPlusTreeIndex->saveBPlusTree();
-        cout<<"saving B+ tree"<<endl;
-        if (this->BPlusTreeIndex->root != nullptr) {
-            BPlusTreeIndex->clear(this->BPlusTreeIndex->root);
-            this->BPlusTreeIndex->root = nullptr;
-    }
+        ~BPlusTreeIndexWrapper() {
+            this->BPlusTreeIndex->saveBPlusTree();
+            cout<<"saving B+ tree"<<endl;
+            if (this->BPlusTreeIndex->root != nullptr) {
+                BPlusTreeIndex->clear(this->BPlusTreeIndex->root);
+                this->BPlusTreeIndex->root = nullptr;
+        }
     
 }
 

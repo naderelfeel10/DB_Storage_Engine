@@ -55,7 +55,7 @@ int main(){
         }
     }
 
-        // load product table :
+    // load product table :
     loaded_table = new TableHeap(BPM,dm->tables_names["Product"],-1);
     tables_map["Product"] = loaded_table;
     loaded_table->loadMetaData();
@@ -87,17 +87,17 @@ int main(){
     ///////////////////////////////////////////////////////////
 
     //1. seq scan over User table to find one match
-    string select_query = "select * from User where user_id=102";
+    string select_query = "select * from User where user_id=1000";
     TableIterator it(loaded_table,loaded_table->getStartingRID(), loaded_table->getStoppigRID());
 
-    cout<<"displaying tuple with user_id = 102"<<endl;
+    cout<<"displaying tuple with user_id = 1000"<<endl;
     auto st1 = chrono::high_resolution_clock::now();
     for(; !it.end(); ++it){
         Tuple t =  *it;
         for(auto& f:t.fields){
 
             if(f.getFieldType() == TYPE_INT){
-                if(f.getFieldValueInt() == 102){
+                if(f.getFieldValueInt() == 1000){
                     t.print();
                     break;
                 }
@@ -110,12 +110,12 @@ int main(){
     cout << "searching using linear scan  duration: " << duration1.count() << " microseconds" << endl;
     ///////////////////////////////////////////////////////////
 
-    //1. B+ Tree index scan over User table to find one match
+    //1B+ Tree index scan over User table to find one match
 
     st1 = chrono::high_resolution_clock::now();
-    Field f102 = Field(TYPE_INT,102);
+    Field f102 = Field(TYPE_INT,1000);
     vector<RID> matched_rids = tables_B_indexes["User"]->Search(f102);
-    cout<<"matched tuples for the value user_id 102"<<endl;
+    cout<<"matched tuples for the value user_id 1000"<<endl;
 
     for(auto& rid:matched_rids){
         //rid.print();
@@ -205,7 +205,7 @@ int main(){
 
         tables_map["Product"]->deleteTuple(rid.getActualPair());
         tables_indexes["Product"]->Delete(search_key);
-        
+
         cout << "deleted successfufly"<<endl;
         break; 
     }

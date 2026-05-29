@@ -81,4 +81,43 @@ public:
 
 };
 
+
+namespace std {
+
+template<>
+struct hash<Field> {
+
+    size_t operator()(const Field& f) const {
+
+        switch (f.getFieldType()) {
+
+            case TYPE_INT:
+                return hash<int>()(
+                    f.getFieldValueInt()
+                );
+
+            case TYPE_FLOAT:
+                return hash<float>()(
+                    f.getFieldValueFloat()
+                );
+
+            case TYPE_BOOL:
+                return hash<bool>()(
+                    f.getFieldValueBool()
+                );
+
+            case TYPE_STRING:
+                return hash<string>()(
+                    string(f.getFieldValueStr())
+                );
+
+            default:
+                return 0;
+        }
+    }
+};
+
+}
+
+
 #endif 

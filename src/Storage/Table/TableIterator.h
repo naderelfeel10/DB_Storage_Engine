@@ -19,6 +19,8 @@ class TableIterator{
         Tuple operator*();
 
         RID getCurrRIDPointer();
+        void setCurrRIDPointer(RID rid){this->curr_rid_pointer=rid;};
+
         
 
 };

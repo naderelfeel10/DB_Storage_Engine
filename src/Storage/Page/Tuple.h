@@ -13,10 +13,9 @@ class Tuple {
         int tulpe_size{};
 
 public:
-    Tuple(std::vector<Field>fields);
     std::vector<Field>fields;
 
-
+    Tuple(std::vector<Field>fields);
     //int getSize() ;
     int getTupleSize() const ;
 

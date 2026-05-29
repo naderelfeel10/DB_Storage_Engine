@@ -24,7 +24,6 @@ struct __attribute__((packed)) DBHeader {
     int number_of_tables{0}; 
 };
 
-
 class DiskManager{
     public:
     //private:
@@ -44,10 +43,12 @@ class DiskManager{
         DiskManager(const string&file_name);
         void saveMetaData();
         void loadMetaData();
+
         void writePage(int page_id, const char*data);
         void readPage(int page_id, char*data);
         void deletePage(int page_id);
         size_t allocatePage();
+        
         size_t getSize();
 
         void addTable(string table_name, int first_page_id);
