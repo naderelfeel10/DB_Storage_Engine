@@ -11,7 +11,7 @@ A lightweight disk-based relational database storage engine implemented in moder
 | **Storage** | Slotted-page layout, 4KB pages, disk-backed |
 | **Buffer Management** | LRU replacement policy, configurable pool size |
 | **Indexing** | Static Hash Index `O(1)` + B+ Tree Index `O(log n)` |
-| **Query Execution** | Volcano-style iterator model |
+| **Query Execution** | Volcano-style iterator model for (seq scan, select, project) |
 | **Join Algorithms** | Nested Loop, Indexed Nested Loop, Hash Join |
 | **Persistence** | Full crash recovery — tables, indexes, metadata survive restarts |
 
@@ -75,7 +75,7 @@ A lightweight disk-based relational database storage engine implemented in moder
 
 ##  Component Breakdown
 
-### 1. 💾 Disk Manager [`src/Storage/Disk`](src/Storage/Disk)
+### 1.  Disk Manager [`src/Storage/Disk`](src/Storage/Disk)
 
 Handles all persistent I/O against the database file.
 
@@ -181,10 +181,22 @@ Volcano-style pull model — each operator exposes `open / getNext / close`.
 ---
 
 ##  Join Algorithm Benchmarks
+| Join Algorithm | Complexity | Benchmark (10,000 Orders × 500 Users) |
+|---|---|---|
+| **Nested Loop Join** | `O(N × M)` | (~450,000 µs) |
+| **Indexed Nested Loop Join** | `O(N × lookup)` | (~300,000 µs) |
+| **Hash Join** | `O(N + M)` average | Build + probe hash table (~170,000 µs) |
+
 
 Hash Join significantly outperforms plain Nested Loop on large datasets, while Indexed Nested Loop shines for selective outer relations.
 
-> Full benchmark charts are in the project images above — tested on real multi-page table data.
+<img width="1000" height="300" alt="image" src="https://github.com/user-attachments/assets/8d5afea9-4995-49db-8e85-5965ef1233b4" />
+
+---
+<img width="1000" height="500" alt="image" src="https://github.com/user-attachments/assets/14dcdd4d-0c4e-4e5a-81b7-9d55aa353857" />
+
+---
+<img width="1000" height="500" alt="image" src="https://github.com/user-attachments/assets/5d747429-1ad1-4380-9122-4a5bf4f38040" />
 
 ---
 
@@ -217,7 +229,6 @@ No manual rebuild step — the engine reconstructs itself entirely from disk pag
 - [ ] Sort-Merge Join
 - [ ] Aggregation operators (`COUNT`, `SUM`, `AVG`, `GROUP BY`)
 - [ ] External Merge Sort
-- [ ] WAL-based crash recovery
 
 ---
 
