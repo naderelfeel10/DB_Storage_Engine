@@ -38,6 +38,8 @@ class Page{
         //int insertData( char* buffer); // parameter is a serialized form of any thing to add
         int insertData(char* buffer, uint16_t raw_size);
         bool getIndexData(int slot_num, char*& buffer);
+
+        vector<Field> get_field_from_all_tuples(int col_index);
         
 
 };

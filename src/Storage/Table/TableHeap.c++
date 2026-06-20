@@ -52,7 +52,7 @@ TableHeap::TableHeap(BufferPoolManager* BPM,int first_page_id=-1, int last_page_
 RID TableHeap::insertTuple(Tuple tuple){
     
 
-    cout<<"last page id :"<<this->last_page_id<<endl;
+    //cout<<"last page id :"<<this->last_page_id<<endl;
     // seleect last page in the table
     char* page_buffer = BPM->fetchPage(this->last_page_id);
     PageHeader* pageHeaer = reinterpret_cast<PageHeader*>(page_buffer);
@@ -63,11 +63,11 @@ RID TableHeap::insertTuple(Tuple tuple){
     // this returns -1 if there is no enough space
     int slot_num  = page->insertTuple(tuple);
 
-    cout<<pageHeaer->next_page_id<< " || " <<pageHeaer->page_id<<" || "<<pageHeaer->num_tuples<<endl;
+    //cout<<pageHeaer->next_page_id<< " || " <<pageHeaer->page_id<<" || "<<pageHeaer->num_tuples<<endl;
 
     // we need to allocate new page
     if(slot_num == -1){
-        cout<<"allocating new page "<<endl;
+        //cout<<"allocating new page "<<endl;
         
         // create it
         int new_page_id = BPM->newPage();
@@ -76,7 +76,7 @@ RID TableHeap::insertTuple(Tuple tuple){
         // marking as dirty to be written on disk latter
         BPM->markAsDirty(last_page_id);
 
-        cout<<pageHeaer->next_page_id<< " || " <<pageHeaer->page_id<<" || "<<pageHeaer->num_tuples<<endl;
+        //cout<<pageHeaer->next_page_id<< " || " <<pageHeaer->page_id<<" || "<<pageHeaer->num_tuples<<endl;
 
         // fetch the new page
         char* new_page_buffer = BPM->fetchPage(new_page_id);
@@ -84,15 +84,15 @@ RID TableHeap::insertTuple(Tuple tuple){
         PageHeader* new_pageHeader = reinterpret_cast<PageHeader*>(new_page_buffer);
         Page* new_page = reinterpret_cast<Page*>(new_page_buffer);
 
-        cout<<new_pageHeader->next_page_id<< " || " <<new_pageHeader->page_id<<" || "<<new_pageHeader->num_tuples<<endl;
+        //cout<<new_pageHeader->next_page_id<< " || " <<new_pageHeader->page_id<<" || "<<new_pageHeader->num_tuples<<endl;
 
         this->last_page_id = new_page_id;
-        cout<<"last vs new page ids : "<<this->last_page_id<<"  ;; "<<new_page_id<<endl;
+        //cout<<"last vs new page ids : "<<this->last_page_id<<"  ;; "<<new_page_id<<endl;
         // insert the tuple .
         int new_slot_num  = new_page->insertTuple(tuple);
         BPM->markAsDirty(new_page_id);
 
-        cout<<"tuple is inserted successfuly , "<< new_page_id<<" "<<new_slot_num<<endl;
+        //cout<<"tuple is inserted successfuly , "<< new_page_id<<" "<<new_slot_num<<endl;
         num_of_tuples++;
         //return RID(new_page_id, new_slot_num);
 
@@ -100,7 +100,7 @@ RID TableHeap::insertTuple(Tuple tuple){
     // else means there is enough space in this page
     BPM->markAsDirty(last_page_id); // just for the buffer pool to flush the page into the file 
     
-    cout<<"tuple is inserted successfuly ,,,, "<< last_page_id<<" "<<slot_num<<endl;
+    //cout<<"tuple is inserted successfuly ,,,, "<< last_page_id<<" "<<slot_num<<endl;
     num_of_tuples++;
 
     if(starting_rid.getActualPair().getPageId()==-1){

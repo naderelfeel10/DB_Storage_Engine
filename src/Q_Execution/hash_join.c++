@@ -65,12 +65,11 @@ bool HashJoin::getNext(Tuple*tuple){
     Field search_field = curr_inner_tuple.fields[join_col_index];
     while(true){
         
-        bool is_found = this->hash_map.find(search_field) != this->hash_map.end();
-        // check if found in the hash table
-        if(is_found && this->tuple_index < this->hash_map[search_field].size()){
 
-            Tuple tmp_tuple = this->hash_map[search_field][tuple_index];
+        auto it = hash_map.find(search_field);
 
+        if(it != hash_map.end() && tuple_index < it->second.size()){
+            Tuple& tmp_tuple = it->second[tuple_index];  // reference, no copy
             // i will extract the fields, concat then create new tuple with them
             vector<Field> fields1 = tmp_tuple.fields;
             vector<Field> fields2 = curr_inner_tuple.fields;
@@ -100,7 +99,7 @@ bool HashJoin::getNext(Tuple*tuple){
 ////////////////////////////////////////////
 ///////////////////////////////////////////
 
-
+/*
 vector<string> tables1;
 map<string, TableHeap*>tables_map1;
 map<string, vector<RID>> tables_rids1;
@@ -134,7 +133,7 @@ void createUserTable(BufferPoolManager* BPM, string table_name){
 
 void insertIntoUserTable(){
     cout << "--- Inserting 10 records into User table ---" << endl;
-    for (int i = 0; i < 500; i++) {
+    for (int i = 0; i < 10000; i++) {
 
         Field u1 = Field(TYPE_INT, 100 + i);                
         Field u2 = Field(TYPE_STRING, ("First_" + to_string(i)).c_str());
@@ -174,7 +173,7 @@ void createOrderTable(BufferPoolManager* BPM, string table_name){
 
 void insertIntoOrderTable(){
 cout << "\n--- Inserting 10 records into Order table ---" << endl;
-    for (int i = 0; i < 10000; i++) {
+    for (int i = 0; i < 1000000; i++) {
         Field o1 = Field(TYPE_INT, 9000 + i);          
         Field o2 = Field(TYPE_INT, 100 + (i%500));                
         Field o3 = Field(TYPE_FLOAT, static_cast<float>(150.75 + (i * 20.5))); 
@@ -257,7 +256,7 @@ int main() {
 
     createOrderTable(BPM, "Order");
     insertIntoOrderTable();
-    buildOrderIndex(tables_map1["Order"],tables_rids1["Order"], BPM);
+    //buildOrderIndex(tables_map1["Order"],tables_rids1["Order"], BPM);
 
     AbstractExecuter* order_seq_scan = new SeqScan(tables_map1["Order"]);
 
@@ -292,3 +291,4 @@ int main() {
 
     return 0;
 }
+*/

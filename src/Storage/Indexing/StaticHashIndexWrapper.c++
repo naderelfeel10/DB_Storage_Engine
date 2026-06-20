@@ -43,12 +43,12 @@ void  StaticHashIndexWrapper::Insert(Field&field,string col_name, vector<Column>
 
     if(this->staticHashIndex->get_number_ofentries()*1.0 / this->staticHashIndex->getCapacity() >=0.75){
         
-        cout<<"==============hash table is almost full================================="<<endl;
+        //cout<<"==============hash table is almost full================================="<<endl;
 
         // double the capacity
         int old_table_capacity = this->staticHashIndex->getCapacity();
 
-        hashIndex* new_staticHashIndex = new hashIndex(this->BPM, field_type, col_index, 2*old_table_capacity,
+        hashIndex* new_staticHashIndex = new hashIndex(this->BPM, field_type, col_index, 10*old_table_capacity,
             this->staticHashIndex->get_first_pageid(),this->staticHashIndex->get_last_pageid());
 
         // copy the old one into the new hash index
@@ -83,7 +83,7 @@ void  StaticHashIndexWrapper::Insert(Field&field,string col_name, vector<Column>
     // reassign pointers
     //insert the value
     if(slot_num == -1){
-        cout<<"allocating new page"<<endl;
+        //cout<<"allocating new page"<<endl;
         //create new page
         int new_page_id = BPM->newPage();
         pageHeader->next_page_id = new_page_id;
@@ -100,7 +100,7 @@ void  StaticHashIndexWrapper::Insert(Field&field,string col_name, vector<Column>
         //last_page_id = new_page_id;
         this->staticHashIndex->set_last_page_id(new_page_id);
         BPM->markAsDirty(new_page_id);
-        cout<<"reinserting into index:  "<<this->staticHashIndex->get_first_pageid()<<" === "<<this->staticHashIndex->get_last_pageid()<<endl;
+        //cout<<"reinserting into index:  "<<this->staticHashIndex->get_first_pageid()<<" === "<<this->staticHashIndex->get_last_pageid()<<endl;
 
         // lets try to reinsert
         int new_slot_num = newPage->insertData(entry_data,entry_size);
@@ -151,13 +151,13 @@ void StaticHashIndexWrapper::displayIndexPages() {
     std::cout << "--- End of Table ---\n";
 }
  StaticHashIndexWrapper::~StaticHashIndexWrapper(){
-    cout<<"deleting  hash wrapper"<<endl;
+    //cout<<"deleting  hash wrapper"<<endl;
     //this->staticHashIndex->saveIndexMeta();
     if (this->staticHashIndex != nullptr) {
         this->staticHashIndex->saveIndexMeta();
         delete this->staticHashIndex;
     }
-    cout<<"hash wrapper is deleted"<<endl;
+    //cout<<"hash wrapper is deleted"<<endl;
 }
 /*
 int 

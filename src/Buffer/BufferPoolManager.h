@@ -9,7 +9,7 @@
 #include <utility>
 #include "../Storage/Disk/DiskManager.h"
 #include "LRU_replacement.h"
-#define BUFFER_SIZE 1000
+#define BUFFER_SIZE 100
 using namespace std;
 
 /*
