@@ -1,6 +1,6 @@
 # Minimal Database Engine
 
-A lightweight disk-based relational database storage engine implemented in modern C++, designed to simulate the internal architecture of real-world DBMS systems like PostgreSQL. The engine implements core database components including a Query Executer, Disk Manager, Buffer Pool Manager with LRU replacement, slotted-page storage, persistent table heaps, and tuple serialization. It supports CRUD operations, sequential scans, static hash indexing for O(1) lookups, and B+ Tree indexing for efficient O(log n) queries and range scans. All tables, metadata, and indexes are fully persistent on disk and can be reconstructed after restarting the system. The project demonstrates how modern databases optimize storage, minimize disk I/O, and accelerate query execution through caching and indexing techniques. Built from scratch — no third-party database libraries.
+A lightweight disk-based relational database storage engine implemented in modern C++, designed to simulate the internal architecture of real-world DBMS systems like PostgreSQL. The engine implements core database components including a Query Executer, Disk Manager, Buffer Pool Manager with LRU replacement, slotted-page storage, persistent table heaps, and tuple serialization. It supports CRUD operations, sequential scans, static hash indexing for O(1) lookups, B+ Tree indexing for efficient O(log n) queries and range scans, and external merge sort for sorting datasets that exceed available memory. All tables, metadata, and indexes are fully persistent on disk and can be reconstructed after restarting the system. The project demonstrates how modern databases optimize storage, minimize disk I/O, and accelerate query execution through caching and indexing techniques. Built from scratch — no third-party database libraries.
 
 ---
 
@@ -13,7 +13,8 @@ A lightweight disk-based relational database storage engine implemented in moder
 | **Indexing** | Static Hash Index `O(1)` + B+ Tree Index `O(log n)` |
 | **Query Execution** | Volcano-style iterator model for (seq scan, select, project) |
 | **Join Algorithms** | Nested Loop, Indexed Nested Loop, Hash Join |
-| **Persistence** | Full crash recovery — tables, indexes, metadata survive restarts |
+| **Sorting** | External Merge Sort - sorts datasets larger than memory |
+| **Persistence** | Full crash recovery - tables, indexes, metadata survive restarts |
 
 ---
 
@@ -22,7 +23,7 @@ A lightweight disk-based relational database storage engine implemented in moder
 ```
 ┌──────────────────────────────────────────────────┐
 │              Query Execution Engine               │
-│   SeqScan │ Select │ Project │ Join │ HashJoin    │
+│   SeqScan │ Select │ Project │ Join │ ExMergeSort │
 └────────────────────┬─────────────────────────────┘
                      │
 ┌────────────────────▼─────────────────────────────┐
@@ -65,6 +66,16 @@ A lightweight disk-based relational database storage engine implemented in moder
 │   │       ├── BPlusTreeIndex.c++
 │   │       └── BPlusTreeIndexWrapper.c++
 │   └── Q_Execution/
+│       ├── AbstractPredicate.h
+│       ├── ComplexPredicate.cpp
+│       ├── ExternalMergeSortExecuter.cpp
+│       ├── hash_join.cpp
+│       ├── IndexedNested_loop_join.cpp
+│       ├── Nested_loop_join.cpp
+│       ├── Predicate.cpp
+│       ├── Projection_operator.cpp
+│       ├── select_operator.cpp
+│       ├── seq_scan_operator.cpp
 └── test/
     ├── test_multiple_tables.c++
     ├── test_loading_DB.c++
@@ -199,7 +210,32 @@ Hash Join significantly outperforms plain Nested Loop on large datasets, while I
 <img width="1000" height="500" alt="image" src="https://github.com/user-attachments/assets/5d747429-1ad1-4380-9122-4a5bf4f38040" />
 
 ---
+### 7. External Merge Sort src/Q_Execution
+#### Sorts a table on any column (ASC or DESC) using a two-phase disk-based strategy, following the Volcano model so it composes naturally with any upstream operator.
+##### How it works
+```
+Phase 1 — Run Generation
+  ┌──────────────────────────────────────────────┐
+  │  Fetch tuples from child operator            │
+  │  Fill an in-memory buffer (one page at a     │
+  │  time), sort it locally, flush to disk       │
+  │  → produces N sorted single-page runs        │
+  └──────────────────────────────────────────────┘
 
+Phase 2 — Merge Passes
+  ┌──────────────────────────────────────────────┐
+  │  Pop pairs of runs from the queue            │
+  │  Merge each pair into a new sorted run       │
+  │  (multi-page, linked via next_page_id)       │
+  │  Push merged run back onto the queue         │
+  │  Repeat until one run remains                │
+  └──────────────────────────────────────────────┘
+
+  Total I/O Complexity: 
+  2N*(1+logB−1(N/B))
+
+```
+---
 ##  Persistence & Recovery
 
 All storage artifacts survive process termination and reload cleanly on startup.
