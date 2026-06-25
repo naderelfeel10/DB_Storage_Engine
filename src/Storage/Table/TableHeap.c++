@@ -93,7 +93,6 @@ RID TableHeap::insertTuple(Tuple tuple){
         BPM->markAsDirty(new_page_id);
 
         //cout<<"tuple is inserted successfuly , "<< new_page_id<<" "<<new_slot_num<<endl;
-        num_of_tuples++;
         //return RID(new_page_id, new_slot_num);
 
     }

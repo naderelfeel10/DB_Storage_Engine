@@ -153,24 +153,18 @@ void Field::print() {
 // a better way to print
 void Field::print() {
     const int VAL_WIDTH = 15;
-
-    // 1. Convert value to raw string display form
-    auto getDisplayValue = [&]() -> std::string {
-        if (this->is_null) return "[NULL]";
-
-        switch (fieldType) {
-            case TYPE_INT:    return std::to_string(VALUE_INT);
-            case TYPE_FLOAT:  return std::to_string(VALUE_FLOAT);
-            case TYPE_BOOL:   return (VALUE_BOOL ? "true" : "false");
-            case TYPE_STRING: return (VALUE_STRING ? VALUE_STRING : "[EMPTY]");
-            default:          return "??";
-        }
-    };
-
-    // 2. Print value flat on the SAME line (Notice: NO std::endl here!)
-    std::string displayValue = getDisplayValue();
-    std::cout << std::left << std::setw(VAL_WIDTH) << displayValue << " | ";
+    
+    switch (fieldType) {
+        case TYPE_INT:   std::cout << std::left << std::setw(VAL_WIDTH) << VALUE_INT;   break;
+        case TYPE_FLOAT: std::cout << std::left << std::setw(VAL_WIDTH) << VALUE_FLOAT; break;
+        case TYPE_BOOL:  std::cout << std::left << std::setw(VAL_WIDTH) << (VALUE_BOOL ? "true" : "false"); break;
+        case TYPE_STRING: std::cout << std::left << std::setw(VAL_WIDTH) << (VALUE_STRING ? VALUE_STRING : "[EMPTY]"); break;
+        default:         std::cout << std::left << std::setw(VAL_WIDTH) << "??"; break;
+    }
+    std::cout << " | ";
 }
+
+
 
 
 int Field::getFieldValueInt()const {

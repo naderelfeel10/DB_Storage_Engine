@@ -45,7 +45,7 @@ bool IndexedNestedLoopJoin::getNext(Tuple*tuple){
     // then check if outer table still have tuples
     // if yes then update to pointer of inner table to start from the begininig 
     // else return false as outer table has been finished
-    if(curr_matching_rids.empty()){
+    while(curr_matching_rids.empty()){
         if(!this->outer_table->getNext(&this->curr_tuple)){
             return false;
         }
@@ -82,7 +82,7 @@ bool IndexedNestedLoopJoin::getNext(Tuple*tuple){
 }
 
 
-/*
+
 ////////////////////////////////////////////
 ///////////////////////////////////////////
 
@@ -135,7 +135,6 @@ void insertIntoUserTable(){
 
 
 
-
 void createOrderTable(BufferPoolManager* BPM, string table_name){
     tables1.push_back(table_name);
 
@@ -159,10 +158,10 @@ void createOrderTable(BufferPoolManager* BPM, string table_name){
 }
 
 void insertIntoOrderTable(){
-cout << "\n--- Inserting 1000000 records into Order table ---" << endl;
+cout << "\n--- Inserting some records into Order table ---" << endl;
     for (int i = 0; i < 1000000; i++) {
         Field o1 = Field(TYPE_INT, 9000 + i);          
-        Field o2 = Field(TYPE_INT, 100 + (i%500));                
+        Field o2 = Field(TYPE_INT, 100 + (i%1000));                
         Field o3 = Field(TYPE_FLOAT, static_cast<float>(150.75 + (i * 20.5))); 
         Field o4 = Field(TYPE_BOOL, (i % 2 == 0));          
 
@@ -171,6 +170,7 @@ cout << "\n--- Inserting 1000000 records into Order table ---" << endl;
         tables_rids1["Order"].push_back(rid);
     }
 }
+
 
 void buildOrderIndex(TableHeap* order_table, const vector<RID>& order_rids, BufferPoolManager* BPM) {
     if (order_rids.empty()) return;
@@ -207,6 +207,10 @@ void buildOrderIndex(TableHeap* order_table, const vector<RID>& order_rids, Buff
 }
 
 int main() {
+
+    ios_base::sync_with_stdio(false);
+    cout.tie(nullptr);
+
     string DB_name = "testSeqScanDB";
     DiskManager* dm = new DiskManager(DB_name);
     BufferPoolManager* BPM = new BufferPoolManager(dm);
@@ -226,48 +230,41 @@ int main() {
 
     Column* const_107 = new Column(new Field(TYPE_INT, 107), "C107",4);
     AbstractPredicate* leaf2 = new Predicate(col_id, const_107, PredicateType::LE);
-
     AbstractPredicate* and_gate = new ComplexPredicate(leaf1, leaf2, ComplexPredicateType::AND);
-
     AbstractPredicate* leaf4 = new Predicate(col_last, col_first, PredicateType::EQ);
-
     AbstractPredicate* root_expression = new ComplexPredicate(and_gate, leaf4, ComplexPredicateType::OR);
-
-
-
     AbstractExecuter* select = new Select(seq_scan, root_expression);
-
     vector<string>projection_cols = {"user_id","firstName"};
-    Projection* projection = new Projection(select, projection_cols);
-
+    //Projection* projection = new Projection(select, projection_cols);
 
     createOrderTable(BPM, "Order");
     insertIntoOrderTable();
+    
+    auto st1 = chrono::high_resolution_clock::now();
     buildOrderIndex(tables_map1["Order"],tables_rids1["Order"], BPM);
-
     AbstractExecuter* order_seq_scan = new SeqScan(tables_map1["Order"]);
-
     Column* order_col_id = new Column(TYPE_INT, "Order.user_id", 4);
     Column* user_col_id = new Column(TYPE_INT, "User.user_id", 4);
 
+
     AbstractPredicate* join_pred = new Predicate(order_col_id, user_col_id, PredicateType::EQ);
+    AbstractExecuter* indexed_nested_loop_join = new IndexedNestedLoopJoin(seq_scan,tables_indexes1["Order"] ,tables_map1["Order"],join_pred);
 
-    AbstractExecuter* indexed_nested_loop_join = new IndexedNestedLoopJoin(projection,tables_indexes1["Order"] ,tables_map1["Order"],join_pred);
-
-    auto st1 = chrono::high_resolution_clock::now();
 
 
     indexed_nested_loop_join->open();
 
     cout<<"executing the query"<<endl;
     Tuple* result_row = new Tuple({});
+    int counter{0};
 
-    for(auto&col:projection_cols)cout<<col<<"           |";
-    cout<<endl;
     while (indexed_nested_loop_join->getNext(result_row)) {
         result_row->print();
+        counter++;
     }
+
     cout<<"done"<<endl;
+    cout<<"counter : "<<counter<<endl;
 
     indexed_nested_loop_join->close();
 
@@ -278,4 +275,3 @@ int main() {
 
     return 0;
 }
-*/

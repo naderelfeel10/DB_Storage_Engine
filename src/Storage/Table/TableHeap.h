@@ -91,6 +91,7 @@ class TableHeap{
         Tuple getTupleFromRID(RID rid);
 
         int getColIndex(string col_name);
+        int get_tuples_num(){return this->num_of_tuples;}
     
         ~TableHeap();
 

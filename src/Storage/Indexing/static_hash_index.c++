@@ -145,7 +145,7 @@ hashEntry* hashIndex::getHashEntryPtr(Field key){
             size_t index = hashFunction(key);
 
             if(!hashTable[index].has_value()){
-                cout<<"hashTable has no value"<<endl;
+                //cout<<"hashTable has no value"<<endl;
                 return nullptr;
             }
 
@@ -171,7 +171,7 @@ vector<RID> hashIndex::getValue(Field key){
 
             vector<RID>res;
             if(curr_ptr == nullptr){
-                cout<<"curr_ptr is null"<<endl;
+                //cout<<"curr_ptr is null"<<endl;
                 return res;
             }else{
                 while(curr_ptr){

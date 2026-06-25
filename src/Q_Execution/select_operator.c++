@@ -16,9 +16,10 @@ bool Select::getNext(Tuple* tuple){
     //get the next tuple using the child operator
     // now the tuple has the data of the next tuple, i will check if it satisfies the condition
 
+     // extract cols from table heap in child
+    vector<Column>cols = (this->child_operator)->getTableHeap()->getCols();
     while(this->child_operator->getNext(tuple)){
-        // extract cols from table heap in child
-        vector<Column>cols = (this->child_operator)->getTableHeap()->getCols();
+
         if(this->predicate->evaluate(tuple, cols)){
             return true;
         }

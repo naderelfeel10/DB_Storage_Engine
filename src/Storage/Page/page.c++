@@ -193,9 +193,9 @@ int Page::updateTuple(int slot_num, Tuple new_tuple){
 
 vector<Field> Page::get_field_from_all_tuples(int col_index){
 
+ 
     PageHeader* header = reinterpret_cast<PageHeader*>(data);
     vector<Field> res;
-    
     for(int i=0;i<header->num_tuples;i++){
         Tuple tuple({});
         this->getTuple(i,tuple);

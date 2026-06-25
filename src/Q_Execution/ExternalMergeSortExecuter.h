@@ -21,13 +21,13 @@ using namespace std;
 
 enum  sorting_methods {ASC,DESC }; 
 
-class ExternalMergeSort : AbstractExecuter {
+class ExternalMergeSort :public AbstractExecuter {
         
         private:
             AbstractExecuter* child_executer;
             Column sort_key; // the key iam sorting on
             sorting_methods sorting_method;
-            BufferPoolManager* BPM; // i need buffer pool manager for creating and fetching pages
+            BufferPoolManager* BPM; 
 
             queue<int>pages_ids;
             vector<Tuple> run_buffer;

@@ -31,6 +31,13 @@ void ExternalMergeSort::open(){
 
             this->tmp_page_buffer = this->BPM->fetchPage(tmp_page_id);
             page = reinterpret_cast<Page*>(tmp_page_buffer);
+                // clear the map
+            run_buffer.clear();
+
+            //retinsert faild tuple
+            int slot_num = page->insertTuple(tuple);
+            run_buffer.push_back(tuple);
+            BPM->markAsDirty(tmp_page_id);
         }
         // if the page is not full:
         else{
@@ -58,10 +65,7 @@ void ExternalMergeSort::open(){
 
     // i will stop when i have just one page left
 
-    if(pages_ids.size()%2 ==1){
-        int last_page_id = this->BPM->newPage();
-        pages_ids.push(last_page_id);
-    }
+    cout<<"pages_ids size : "<<pages_ids.size()<<endl;
     while(pages_ids.size()>1){
 
         //get pages ods from the Q
@@ -80,34 +84,41 @@ void ExternalMergeSort::open(){
 
         ///
             int next_page_id1 = left_page_header->next_page_id;
+            vector<int>left_run_pages_ids = {first_page_id};
 
-            cout<<first_page_id<<" | ";
+            //cout<<first_page_id<<" | ";
             while(next_page_id1 != -1){
-                cout<<next_page_id1<<" | ";
+                //cout<<next_page_id1<<" | ";
+                left_run_pages_ids.push_back(next_page_id1);
                 char* page_buffer = this->BPM->fetchPage(next_page_id1);
                 PageHeader* header = reinterpret_cast<PageHeader*>(page_buffer);
                 next_page_id1 = header->next_page_id;
             }
-            cout<<endl;
+           // cout<<endl;
         ////
+       // cout<<"left_size :"<<left_run_pages_ids.size()<<endl;
 
         char* right_page_buffer = this->BPM->fetchPage(second_page_id);
         PageHeader* right_page_header = reinterpret_cast<PageHeader*>(right_page_buffer);
         Page* right_page = reinterpret_cast<Page*>(right_page_buffer);
+        vector<int>right_run_pages_ids = {second_page_id};
 
         ///
             next_page_id1 = right_page_header->next_page_id;
 
-            cout<<second_page_id<<" | ";
+            //cout<<second_page_id<<" | ";
             while(next_page_id1 != -1){
-                cout<<next_page_id1<<" | ";
+                //cout<<next_page_id1<<" | ";
+                right_run_pages_ids.push_back(next_page_id1);
                 char* page_buffer = this->BPM->fetchPage(next_page_id1);
                 PageHeader* header = reinterpret_cast<PageHeader*>(page_buffer);
                 next_page_id1 = header->next_page_id;
             }
-            cout<<endl;
+            //cout<<endl;
         ////
+        //cout<<"right_size :"<<right_run_pages_ids.size()<<endl;
 
+        /*
         // i need to get all left&right run pages ids into an array
         vector<int>left_run_pages_ids = {first_page_id};
         int next_left = left_page_header->next_page_id;
@@ -119,6 +130,7 @@ void ExternalMergeSort::open(){
 
             next_left = next_page_header->next_page_id;
         }
+        cout<<"left_size :"<<left_run_pages_ids.size()<<endl;
 
         vector<int>right_run_pages_ids = {second_page_id};
         int next_right = right_page_header->next_page_id;
@@ -130,38 +142,25 @@ void ExternalMergeSort::open(){
 
             next_right = next_page_header->next_page_id;
         }
+        cout<<"right_size :"<<right_run_pages_ids.size()<<endl;
 
+        */
         // prepare a vector of targted field to sort on
         // a  2d vector, each row contains fields of one page
         // rid of a tuple is (row_num, col_num)
 
         vector<vector<Field>> left_page_fields;
-        left_page_fields.push_back(left_page->get_field_from_all_tuples(col_index));
-        int curr_left_page_id = left_page_header->next_page_id;
-
-        while(curr_left_page_id!=-1){
-
-            char* tmp_buffer = this->BPM->fetchPage(curr_left_page_id);
-            PageHeader* tmp_header = reinterpret_cast<PageHeader*>(tmp_buffer);
-            Page* tmp_page = reinterpret_cast<Page*>(tmp_buffer);
-
-            left_page_fields.push_back(tmp_page->get_field_from_all_tuples(col_index));
-            curr_left_page_id = tmp_header->next_page_id;
+        for(int id : left_run_pages_ids){
+            char* buf = this->BPM->fetchPage(id);
+            Page* pg = reinterpret_cast<Page*>(buf);
+            left_page_fields.push_back(pg->get_field_from_all_tuples(col_index));
         }
 
-
         vector<vector<Field>> right_page_fields;
-        right_page_fields.push_back(right_page->get_field_from_all_tuples(col_index));
-        int curr_right_page_id = right_page_header->next_page_id;
-
-        while(curr_right_page_id!=-1){
-
-            char* tmp_buffer = this->BPM->fetchPage(curr_right_page_id);
-            PageHeader* tmp_header = reinterpret_cast<PageHeader*>(tmp_buffer);
-            Page* tmp_page = reinterpret_cast<Page*>(tmp_buffer);
-
-            right_page_fields.push_back(tmp_page->get_field_from_all_tuples(col_index));
-            curr_right_page_id = tmp_header->next_page_id;
+        for(int id : right_run_pages_ids){
+            char* buf = this->BPM->fetchPage(id);
+            Page* pg = reinterpret_cast<Page*>(buf);
+            right_page_fields.push_back(pg->get_field_from_all_tuples(col_index));
         }
 
         // i will merge those 2 arrays and store actual tuples in new pages
@@ -174,7 +173,7 @@ void ExternalMergeSort::open(){
 
         // i have to push it into pages_ids to be considered in upcomming merges
         this->pages_ids.push(new_page_id);
-        cout<<"pushing :"<<new_page_id<<endl;
+        //cout<<"pushing :"<<new_page_id<<endl;
 
         //merge
         int left{0},right{0};
@@ -320,15 +319,15 @@ void ExternalMergeSort::open(){
     PageHeader* header = reinterpret_cast<PageHeader*>(page_buffer);
     int next_page_id = header->next_page_id;
 
-    cout<<page_id<<" | ";
+    //cout<<page_id<<" | ";
     while(next_page_id != -1){
         page_id = next_page_id;
-        cout<<page_id<<" | ";
+        //cout<<page_id<<" | ";
         char* page_buffer = this->BPM->fetchPage(next_page_id);
         PageHeader* header = reinterpret_cast<PageHeader*>(page_buffer);
         next_page_id = header->next_page_id;
     }
-    cout<<endl;
+    //cout<<endl;
 
 }
 
@@ -341,26 +340,32 @@ void ExternalMergeSort::insert_tuple(int &new_page_id,Page*& new_page,PageHeader
         
         Tuple tuple({});
         page->getTuple(slot_num, tuple);
+
+        char* new_buf = this->BPM->fetchPage(new_page_id);
+        new_page = reinterpret_cast<Page*>(new_buf);
+        new_page_header = reinterpret_cast<PageHeader*>(new_buf);
+
         int new_slot_num = new_page->insertTuple(tuple);
         this->BPM->markAsDirty(new_page_id);
 
         // check if the page is full 
-    if(new_slot_num == -1){
+        if(new_slot_num == -1){
+            int next_page_id = this->BPM->newPage();
 
-        int next_page_id = this->BPM->newPage();
-        char* next_page_buffer = this->BPM->fetchPage(next_page_id);
-        Page* next_page = reinterpret_cast<Page*>(next_page_buffer);
+            //refetch current output page again before writing next_page_id into header
+            new_buf = this->BPM->fetchPage(new_page_id);
+            new_page_header = reinterpret_cast<PageHeader*>(new_buf);
+            new_page_header->next_page_id = next_page_id;
+            this->BPM->markAsDirty(new_page_id);
 
-        new_page_header->next_page_id = next_page_id;
-        this->BPM->markAsDirty(new_page_id);
+            char* next_buf = this->BPM->fetchPage(next_page_id);
+            new_page_id = next_page_id;
+            new_page = reinterpret_cast<Page*>(next_buf);
+            new_page_header = reinterpret_cast<PageHeader*>(next_buf);
 
-        new_page_id = next_page_id;
-        new_page= next_page;
-        new_page_header = reinterpret_cast<PageHeader*>(next_page_buffer); // ← add this
-
-        new_page->insertTuple(tuple);
-        this->BPM->markAsDirty(new_page_id);
-    }
+            new_page->insertTuple(tuple);
+            this->BPM->markAsDirty(new_page_id);
+        }
         // advace pointer
         if(left == -1){
             right++;
@@ -396,7 +401,11 @@ void ExternalMergeSort::write_run_buffer_on_disk(int col_index, Tuple& tuple){
     // insert sorted tuples from map
     // insert into the actual page that is gonna be flushed on disk for upcomming merging
     for(auto&v : run_buffer){
-        page2->insertTuple(v);
+        int slot_num = page2->insertTuple(v);
+        if(slot_num == -1){
+            cerr<<"stooooooop"<<endl;
+            
+        }
     }
 
     // flush the page on disk
@@ -414,13 +423,6 @@ void ExternalMergeSort::write_run_buffer_on_disk(int col_index, Tuple& tuple){
     header->free_space_pointer = PAGE_SIZE;
     memset(tmp_page_buffer + sizeof(PageHeader), 0, PAGE_SIZE - sizeof(PageHeader));
 
-    // clear the map
-    run_buffer.clear();
-    
-    //retinsert faild tuple
-    int slot_num = page->insertTuple(tuple);
-    run_buffer.push_back(tuple);
-    BPM->markAsDirty(tmp_page_id);
 }
 
 
@@ -487,8 +489,8 @@ void ExternalMergeSort::close(){
     
 }
 
-/////////////////////////////////////////////////////////////////////////////////
-
+////////////////////////////////////////////////////////////////////////////////
+/*
 vector<string> tables;
 map<string, TableHeap*>tables_map;
 map<string, vector<RID>> tables_rids;
@@ -520,8 +522,7 @@ void createUserTable(BufferPoolManager* BPM, string table_name){
 
 
 void insertIntoUserTable(){
-    cout << "--- Inserting 10 records into User table ---" << endl;
-    for (int i = 0; i < 65*4+50; i++) {
+    for (int i = 0; i < 7000; i++) {
 
         Field u1 = Field(TYPE_INT, 100 + i);                
         Field u2 = Field(TYPE_STRING, ("First_" + to_string(i)).c_str());
@@ -548,22 +549,24 @@ main(){
     insertIntoUserTable();
 
     SeqScan* seq_scan = new SeqScan(tables_map["User"]);
-
     Column sort_key = Column(TYPE_INT, "age", sizeof(int));
-    ExternalMergeSort* external_merge_sort = new ExternalMergeSort(BPM, seq_scan,sort_key ,ASC);
-    bool res{true};
+    
+    ExternalMergeSort* external_merge_sort = new ExternalMergeSort(BPM, seq_scan,sort_key,ASC);
 
-    tables_map["User"]->displayTablePages();
-    int counter{0};
     external_merge_sort->open();
-    while(res){
-    Tuple* t1 = new Tuple({});
-    res = external_merge_sort->getNext(t1);
-    if(res)
-        t1->print();
+
+    Tuple* tuple = new Tuple({});
+    external_merge_sort->getNext(tuple);
+
+    int counter{0};
+    do{
+        //tuple->print();
         counter++;
-    }
-    cout<<"result count : "<<counter<<endl;
+    }while(external_merge_sort->getNext(tuple));
+
+    cout<<counter<<endl;
 
 
 }
+
+*/

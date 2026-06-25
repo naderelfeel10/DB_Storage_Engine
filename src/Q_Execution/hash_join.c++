@@ -175,7 +175,7 @@ void insertIntoOrderTable(){
 cout << "\n--- Inserting 10 records into Order table ---" << endl;
     for (int i = 0; i < 1000000; i++) {
         Field o1 = Field(TYPE_INT, 9000 + i);          
-        Field o2 = Field(TYPE_INT, 100 + (i%500));                
+        Field o2 = Field(TYPE_INT, 100 + (i%1000));                
         Field o3 = Field(TYPE_FLOAT, static_cast<float>(150.75 + (i * 20.5))); 
         Field o4 = Field(TYPE_BOOL, (i % 2 == 0));          
 
@@ -220,6 +220,10 @@ void buildOrderIndex(TableHeap* order_table, const vector<RID>& order_rids, Buff
 }
 
 int main() {
+
+    ios_base::sync_with_stdio(false);
+    cout.tie(nullptr);
+
     string DB_name = "testSeqScanDB";
     DiskManager* dm = new DiskManager(DB_name);
     BufferPoolManager* BPM = new BufferPoolManager(dm);
@@ -265,27 +269,34 @@ int main() {
 
     AbstractPredicate* join_pred = new Predicate(order_col_id, user_col_id, PredicateType::EQ);
 
-    AbstractExecuter* hash_join = new HashJoin(projection, order_seq_scan, join_pred, "user_id");
+    AbstractExecuter* hash_join = new HashJoin(seq_scan, order_seq_scan, join_pred, "user_id");
 
     auto st1 = chrono::high_resolution_clock::now();
 
 
     hash_join->open();
 
+    auto end1 = chrono::high_resolution_clock::now();
+    auto duration1 = chrono::duration_cast<chrono::microseconds>(end1 - st1);
+    
     cout<<"executing the query"<<endl;
     Tuple* result_row = new Tuple({});
 
-    for(auto&col:projection_cols)cout<<col<<"           |";
     cout<<endl;
+    int counter{0};
     while (hash_join->getNext(result_row)) {
         result_row->print();
+        counter++;
     }
     cout<<"done"<<endl;
+    cout<<"counter : "<<counter<<endl;
 
     hash_join->close();
 
-    auto end1 = chrono::high_resolution_clock::now();
-    auto duration1 = chrono::duration_cast<chrono::microseconds>(end1 - st1);
+    cout << "searching using hash join duration: " << duration1.count() << " microseconds" << endl;
+
+    end1 = chrono::high_resolution_clock::now();
+    duration1 = chrono::duration_cast<chrono::microseconds>(end1 - st1);
     cout << "searching using hash join duration: " << duration1.count() << " microseconds" << endl;
 
 

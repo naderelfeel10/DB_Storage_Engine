@@ -15,6 +15,7 @@ class AbstractExecuter{
     virtual void open()=0;
     virtual void close()=0;
     virtual bool getNext(Tuple*tuple)=0;
+    
     virtual TableHeap* getTableHeap()=0;
     virtual vector<Column> get_output_schema()=0;
 

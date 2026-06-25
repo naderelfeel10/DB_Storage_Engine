@@ -23,18 +23,10 @@ void Tuple::print(){
 */
 // a better way to print
 void Tuple::print() {
-    // Optional: Hide metadata unless you specifically need it for debugging
-
-    // Start of row boundary
     std::cout << "| ";
-
-    // Print every field side-by-side on the exact same row terminal stream
-    for (auto& field : this->fields) {
+    for (auto& field : this->fields)
         field.print();
-    }
-
-    // Now that the entire row is fully printed, break to the next line
-    std::cout << std::endl;
+    std::cout << '\n';  // '\n' is faster than std::endl (no flush)
 }
 
 int Tuple::getTupleSize() const {
