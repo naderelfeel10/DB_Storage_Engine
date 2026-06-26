@@ -12,7 +12,7 @@ A lightweight disk-based relational database storage engine implemented in moder
 | **Buffer Management** | LRU replacement policy, configurable pool size |
 | **Indexing** | Static Hash Index `O(1)` + B+ Tree Index `O(log n)` |
 | **Query Execution** | Volcano-style iterator model for (seq scan, select, project) |
-| **Join Algorithms** | Nested Loop, Indexed Nested Loop, Hash Join |
+| **Join Algorithms** | Nested Loop, Indexed Nested Loop, Hash Join, Merge-Sort Join |
 | **Sorting** | External Merge Sort - sorts datasets larger than memory |
 | **Persistence** | Full crash recovery - tables, indexes, metadata survive restarts |
 
@@ -69,6 +69,7 @@ A lightweight disk-based relational database storage engine implemented in moder
 │       ├── AbstractPredicate.h
 │       ├── ComplexPredicate.cpp
 │       ├── ExternalMergeSortExecuter.cpp
+│       ├── MergeJoinExecuter.cpp
 │       ├── hash_join.cpp
 │       ├── IndexedNested_loop_join.cpp
 │       ├── Nested_loop_join.cpp
@@ -188,26 +189,41 @@ Volcano-style pull model — each operator exposes `open / getNext / close`.
 | **Nested Loop Join** | Pairwise scan `O(N×M)` | `JOIN Order ON User.user_id = Order.user_id` |
 | **Indexed Nested Loop Join** | Uses Hash/B+ Tree on inner table `O(N × lookup)` | Same join, index-assisted |
 | **Hash Join** | Build + probe `O(N+M)` average | Equality joins on large relations |
-
+| **Merge Join** | Build + probe `4*(N+M)` average | equal join on 2 sorted tables |
 ---
 
 ##  Join Algorithm Benchmarks
-| Join Algorithm | Complexity | Benchmark (10,000 Orders × 500 Users) |
-|---|---|---|
-| **Nested Loop Join** | `O(N × M)` | (~450,000 µs) |
-| **Indexed Nested Loop Join** | `O(N × lookup)` | (~300,000 µs) |
-| **Hash Join** | `O(N + M)` average | Build + probe hash table (~170,000 µs) |
+Join Algorithm Comparison
 
+Benchmarks and analysis of four classic join algorithms implemented from scratch in a custom C++ database engine with a Buffer Pool Manager.
+## Test Setup:
+```
+Users: 10,000 rows
+Orders: 1,000,000 rows
+Join: equi-join on user_id
+Skew: high — 1,000 orders per user (user_id = 100 + (i % 1000))
+Buffer Pool: 100 frames
+```
+
+## Join Algorithms Benchmark
+
+The following benchmark compares the execution time of different join algorithms implemented in the DB engine.
+
+| Algorithm | Time              | Index Required | Pre-sort Required |
+|-----------|-------------------|----------------|-------------------|
+| Hash Join | 22 sec | ✗ | ✗ |
+| Indexed Nested Loop Join | 46 sec | ✓ (built at query time) | ✗ |
+| Sort-Merge Join | 78 sec | ✗ | ✗ |
+| Nested Loop Join | too bad | ✗ | ✗ |
+
+### Observations
+
+- **Hash Join** achieved the best performance because it avoids repeated comparisons by using a hash table.
+- **Indexed Nested Loop Join** benefits from indexing but has additional overhead because the index is created during query execution.
+- **Sort-Merge Join** requires sorting phases, which increases execution time.
+- Printing results significantly increases runtime due to console I/O overhead.
 
 Hash Join significantly outperforms plain Nested Loop on large datasets, while Indexed Nested Loop shines for selective outer relations.
-
-<img width="1000" height="300" alt="image" src="https://github.com/user-attachments/assets/8d5afea9-4995-49db-8e85-5965ef1233b4" />
-
----
-<img width="1000" height="500" alt="image" src="https://github.com/user-attachments/assets/14dcdd4d-0c4e-4e5a-81b7-9d55aa353857" />
-
----
-<img width="1000" height="500" alt="image" src="https://github.com/user-attachments/assets/5d747429-1ad1-4380-9122-4a5bf4f38040" />
 
 ---
 ### 7. External Merge Sort src/Q_Execution
@@ -260,12 +276,10 @@ No manual rebuild step — the engine reconstructs itself entirely from disk pag
 
 ---
 
-##  Roadmap
+## near roadmap
 
-- [ ] Sort-Merge Join
 - [ ] Aggregation operators (`COUNT`, `SUM`, `AVG`, `GROUP BY`)
-- [ ] External Merge Sort
-
+- [ ] Query Optimizer
 ---
 
 ##  Build & Run
