@@ -642,7 +642,7 @@ vector<RID> BPlusTree::findValue(Field key) {
     }
 
     bool keepScanning = true;
-    while (current != nullptr && keepScanning) {
+    while (current !=nullptr&&keepScanning){
         for (const auto& entry : current->entries) {
             if (entry.key == key) {
                 results.push_back(entry.value);
@@ -653,7 +653,7 @@ vector<RID> BPlusTree::findValue(Field key) {
         }
         if (keepScanning) {
             int next_pid = current->next_page_id;
-            if (next_pid == -1) break;
+            if (next_pid <= -1) break;
             current = loadNode(next_pid); 
         }
     }
@@ -689,7 +689,7 @@ vector<RID> BPlusTree::rangeQuery(Field lower, Field upper) {
             if (e.key > upper) return result;
         }
         int next_pid = current->next_page_id;
-        if (next_pid == -1) break;
+        if (next_pid <= -1) break;
         current = loadNode(next_pid);
     }
     return result;
@@ -924,7 +924,9 @@ void BPlusTree::loadBPlusTree() {
 
 Node* BPlusTree::loadNode(int page_id) {
 
-    if (page_id == -1) return nullptr;
+    if (page_id <= -1){
+        return nullptr;
+    }
     char* page_buffer = this->bpm->fetchPage(page_id);
 
     // dummy node

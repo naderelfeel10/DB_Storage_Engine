@@ -4,100 +4,151 @@
 using namespace std;
 
 void NestedLoopJoin::open(){
-    this->has_inner = false;
     this->outer_table->open();
     this->inner_table->open();
-    this->get_output_schema();
+    set_output_schema();
 }
 
+//Student       //Grade
+//[id, name] , [id, grade ]
+// Student.id, Student.name, Grade.id, Grade.grade
+
+void NestedLoopJoin::set_output_schema(){
+    vector<Column> outer_schema = this->outer_table->get_output_schema();
+    vector<Column> inner_schema = this->inner_table->get_output_schema();
+
+    string table_name = this->outer_table->getTableHeap()->getTableName();
+    for(int i{0};i<outer_schema.size();i++){
+        string col_name = outer_schema[i].getColName();
+        outer_schema[i].setColName(table_name+'.'+col_name);
+    }
+    //"id" >>> "Student.id"
+
+    table_name = this->inner_table->getTableHeap()->getTableName();
+    for(int i{0};i<inner_schema.size();i++){
+        string col_name = inner_schema[i].getColName();
+        inner_schema[i].setColName(table_name+'.'+col_name);
+    }
+
+    // combine:
+    outer_schema.insert(outer_schema.end(), inner_schema.begin(), inner_schema.end());
+    this->output_schema = outer_schema;
+}
+
+
+vector<Column> NestedLoopJoin::get_output_schema(){
+    return this->output_schema;
+}
+
+
+
+bool NestedLoopJoin::getNext(Tuple* tuple){
+
+    // fetch outer tuple:
+    //loop : 
+        // loop through all inner table till end
+        // match on join condition
+        // when inner table is exausted: fetch the next outer tuple
+    while(true){
+
+        // check whether inner table is exhasted
+        if(!has_inner){
+            // if join type is left join, and no inner matches, then add it once with null inner row
+            if(this->inner_matches_counter ==0 && (this->join_type == LEFT_JOIN || this->join_type == FULL_JOIN)){
+                    
+                    inner_matches_counter =-1;
+                    int inner_tuple_size = this->inner_table->get_output_schema().size();
+                    
+                    Field tmp_f = Field(TYPE_STRING,"NULL");
+                    //tmp_f.set_null(true);
+                    vector<Field> inner_fields(inner_tuple_size, tmp_f);
+                    vector<Field> outer_fields = this->outer_tuple.fields;
+
+                    //safety check
+                    if(outer_fields.size()==0 || inner_fields.size()==0){
+                        continue;
+                    } 
+                    // now we have the full result 
+                    outer_fields.insert(outer_fields.end(), inner_fields.begin(), inner_fields.end());
+                    //create tuple to return
+                    Tuple res_tuple = Tuple(outer_fields);
+                    *tuple = res_tuple;
+                    return true;
+            }else{
+
+            //fetch next outer tuple
+            bool has_outer = this->outer_table->getNext(&this->outer_tuple);
+            //if still tuples in outer table, then match with all inner rows
+            if(has_outer){
+                this->inner_table->open();
+                this->has_inner = true;
+                this->inner_matches_counter =0;
+            }
+            //else means no data left in outer table, so the join is done and no more data
+            else{
+                return false;
+            }
+        }
+        }
+
+        // so there are data left in inner table:
+        this->has_inner = this->inner_table->getNext(tuple);
+        while(has_inner){
+            // outer data + inner data
+            vector<Field> outer_fields = this->outer_tuple.fields;
+            vector<Field> inner_fields = tuple->fields;
+            //safety check
+            if(outer_fields.size()==0 || inner_fields.size()==0){
+                continue;
+            } 
+            // now we have the full result 
+            outer_fields.insert(outer_fields.end(), inner_fields.begin(), inner_fields.end());
+            //create tuple to return
+            Tuple res_tuple = Tuple(outer_fields);
+
+            // check join condition: 
+            if(this->join_condition->evaluate(&res_tuple, this->output_schema)){
+                this->inner_matches_counter++;
+                *tuple = res_tuple;
+                return true;
+            }
+            else if(this->join_type == RIGHT_JOIN || this->join_type == FULL_JOIN){
+
+                vector<Field> inner_fields = tuple->fields;
+                //this->outer_tuple.print();
+                int outer_tuple_size = this->outer_tuple.fields.size();
+
+                //cout<<"outer size :"<<outer_tuple_size<<endl;
+                Field tmp_f = Field(TYPE_STRING,"NULL");
+                //tmp_f.set_null(true);
+                vector<Field> outer_fields1(outer_tuple_size, tmp_f);
+                
+                // now we have the full result 
+                outer_fields1.insert(outer_fields1.end(), inner_fields.begin(), inner_fields.end());
+                //create tuple to return
+                Tuple res_tuple = Tuple(outer_fields1);
+                //for(auto&f:res_tuple.fields)
+                    //f.print();
+                //res_tuple.print();
+                *tuple = res_tuple;
+                 return true;
+            }
+            // fetch the next inner
+            this->has_inner = this->inner_table->getNext(tuple);
+        }
+
+
+    }
+}
+
+
 void NestedLoopJoin::close(){
-    this->has_inner = false;
     this->outer_table->close();
     this->inner_table->close();
 }
 
-vector<Column> NestedLoopJoin::get_output_schema(){
-    vector<Column> outer_schema = this->outer_table->get_output_schema();
-    vector<Column> inner_schema = this->inner_table->get_output_schema();
-
-    // change col name to be table_name.col_name
-    // that's how i can differentiate between cols with same names in diff tables
-    string table_name = outer_table->getTableHeap()->getTableName();
-    for(int i=0; i<outer_schema.size();i++){
-        string col_name = outer_schema[i].getColName();
-        //string table_name = outer_table->getTableHeap()->getTableName();
-        outer_schema[i].setColName(table_name+'.'+col_name);
-    }
-
-    table_name = inner_table->getTableHeap()->getTableName();
-    for(int i=0; i<inner_schema.size();i++){
-        string col_name = inner_schema[i].getColName();
-        //string table_name = inner_table->getTableHeap()->getTableName();
-        inner_schema[i].setColName(table_name+'.'+col_name);
-    }
-    
-    // concat
-    outer_schema.insert(outer_schema.end(), inner_schema.begin(), inner_schema.end());
-
-    this->output_schema = outer_schema;
-
-    return output_schema;
-}
-
-bool NestedLoopJoin::getNext(Tuple*tuple){
-    Tuple tmp_tuple2({});
-
-    while (true) {
-    // if the inner table does not have any more data for the curr outer tuple:
-    // then check if outer table still have tuples
-    // if yes then update to pointer of inner table to start from the begininig 
-    // else return false as outer table has been finished
-    if(!has_inner){
-        if(this->outer_table->getNext(&this->curr_tuple)){
-            has_inner = true;
-            inner_table->open();
-        }else{
-            return false;
-        }
-
-    }
-
-    //reaching this means we have to loop through inner table
-    while(inner_table->getNext(&tmp_tuple2)){
-        // i need to pass 2 2 tuples concatinatd together
-        // i will extract the fields, concat then create new tuple with them
-        vector<Field> fields1 = this->curr_tuple.fields;
-        vector<Field> fields2 = tmp_tuple2.fields;
-        if(fields1.size()==0 || fields2.size()==0){
-            break;
-        }
-
-        fields1.insert(fields1.end(), fields2.begin(), fields2.end());
-        Tuple res_tuple = Tuple(fields1);
-        /*
-        for(auto&o:this->output_schema){
-            o.printCol();
-        }
-        cout<<"----"<<endl;
-        for(auto&o:res_tuple.fields){
-            o.print();
-        }*/
-
-        if (this->join_condition->evaluate(&res_tuple, this->output_schema)) {
-            *tuple = res_tuple;
-            return true;   
-        }
-    }
-    // inner table is finished:
-    // mark has inner as false
-    this->has_inner = false;
-    }
-}
-
-
-
-////////////////////////////////////////////
-///////////////////////////////////////////
+//////////////////////////////
+//////////////////////////////
 
 /*
 vector<string> tables1;
@@ -131,10 +182,10 @@ void createUserTable(BufferPoolManager* BPM, string table_name){
 
 
 void insertIntoUserTable(){
-    cout << "--- Inserting 10 records into User table ---" << endl;
-    for (int i = 0; i < 1000; i++) {
+    cout << "--- Inserting some records into User table ---" << endl;
+    for (int i = 0; i < 10; i++) {
 
-        Field u1 = Field(TYPE_INT, 100 + i%40);                
+        Field u1 = Field(TYPE_INT, 100 + i);                
         Field u2 = Field(TYPE_STRING, ("First_" + to_string(i)).c_str());
         Field u3 = Field(TYPE_STRING, ("Last_" + to_string(i)).c_str()); 
         Field u4 = Field(TYPE_INT, 20 + i);               
@@ -144,7 +195,6 @@ void insertIntoUserTable(){
         tables_rids1["User"].push_back(rid);
     }
 }
-
 
 
 
@@ -171,10 +221,14 @@ void createOrderTable(BufferPoolManager* BPM, string table_name){
 }
 
 void insertIntoOrderTable(){
-cout << "\n--- Inserting 10 records into Order table ---" << endl;
-    for (int i = 0; i < 10000; i++) {
+cout << "\n--- Inserting some records into Order table ---" << endl;
+    for (int i = 0; i < 100; i++) {
         Field o1 = Field(TYPE_INT, 9000 + i);          
-        Field o2 = Field(TYPE_INT, 100 + (i%100));                
+        Field o2;
+        if(i%5 ==0)
+            o2 = Field(TYPE_INT, 100 + (i+100));
+        else 
+            o2 = Field(TYPE_INT, 100 + (i));                
         Field o3 = Field(TYPE_FLOAT, static_cast<float>(150.75 + (i * 20.5))); 
         Field o4 = Field(TYPE_BOOL, (i % 2 == 0));          
 
@@ -197,38 +251,20 @@ int main() {
 
     createUserTable(BPM, "User");
     insertIntoUserTable(); 
-
-
     AbstractExecuter* seq_scan = new SeqScan(tables_map1["User"]);
-
-    Column* col_id = new Column(TYPE_INT, "user_id", 4);    //TUPLE[0]
-    Column* col_first = new Column(TYPE_STRING, "firstName", 30); //TUPLE[1]
-    Column* col_last = new Column(TYPE_STRING, "lastName", 30);   //TUPLE[2]
-
-    //(TUPLE[0] > 102) AND (TUPLE[0] <= 107)
-    Column* const_102 = new Column(new Field(TYPE_INT, 102), "C102",4);
-    AbstractPredicate* leaf1 = new Predicate(col_id, const_102, PredicateType::GT);
-
-    Column* const_107 = new Column(new Field(TYPE_INT, 107), "C107",4);
-    AbstractPredicate* leaf2 = new Predicate(col_id, const_107, PredicateType::LE);
-    AbstractPredicate* and_gate = new ComplexPredicate(leaf1, leaf2, ComplexPredicateType::AND);
-    AbstractPredicate* leaf4 = new Predicate(col_last, col_first, PredicateType::EQ);
-    AbstractPredicate* root_expression = new ComplexPredicate(and_gate, leaf4, ComplexPredicateType::OR);
-
-    AbstractExecuter* select = new Select(seq_scan, root_expression);
-    vector<string>projection_cols = {"user_id","firstName"};
-    Projection* projection = new Projection(select, projection_cols);
 
 
     createOrderTable(BPM, "Order");
     insertIntoOrderTable();
-
     AbstractExecuter* order_seq_scan = new SeqScan(tables_map1["Order"]);
+
     Column* order_col_id = new Column(TYPE_INT, "Order.user_id", 4);
     Column* user_col_id = new Column(TYPE_INT, "User.user_id", 4);
 
+    //Order.user_id = User.user_id
     AbstractPredicate* join_pred = new Predicate(order_col_id, user_col_id, PredicateType::EQ);
-    AbstractExecuter* nested_loop_join = new NestedLoopJoin(seq_scan, order_seq_scan,join_pred);
+    AbstractExecuter* nested_loop_join = new NestedLoopJoin(seq_scan, order_seq_scan,join_pred, LEFT_JOIN);
+
 
     auto st1 = chrono::high_resolution_clock::now();
 
@@ -236,16 +272,15 @@ int main() {
     cout<<"executing the query"<<endl;
     Tuple* result_row = new Tuple({});
 
-    //for(auto&col:projection_cols)cout<<col<<"           |";
+    for(auto&col:nested_loop_join->get_output_schema()){
+        cout<<col.getColName()<<"   | ";
+    }
     cout<<endl;
+
     int counter{0};
     while (nested_loop_join->getNext(result_row)) {
         result_row->print();
         counter++;
-        cout<<"counter : "<<counter<<endl;
-        if(counter==9999){
-            cout<<endl;
-        }
     }
     cout<<"done"<<endl;
     cout<<"counter : "<<counter<<endl;
@@ -258,7 +293,6 @@ int main() {
     auto end1 = chrono::high_resolution_clock::now();
     auto duration1 = chrono::duration_cast<chrono::microseconds>(end1 - st1);
     cout << "searching using  nested loop join duration: " << duration1.count() << " microseconds" << endl;
-
 
 
     return 0;

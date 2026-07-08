@@ -6,7 +6,7 @@ using namespace std;
 void HashJoin::open(){
     this->outer_table->open();
     this->inner_table->open();
-    this->get_output_schema();
+    this->set_output_schema();
 }
 
 void HashJoin::close(){
@@ -14,7 +14,7 @@ void HashJoin::close(){
     this->inner_table->close();
 }
 
-vector<Column> HashJoin::get_output_schema(){
+void HashJoin::set_output_schema(){
     vector<Column> outer_schema = this->outer_table->get_output_schema();
     vector<Column> inner_schema = this->inner_table->get_output_schema();
 
@@ -37,8 +37,13 @@ vector<Column> HashJoin::get_output_schema(){
 
     this->output_schema = outer_schema;
 
-    return output_schema;
+    //return output_schema;
 }
+
+vector<Column> HashJoin::get_output_schema(){
+    return this->output_schema;
+}
+
 
 bool HashJoin::getNext(Tuple*tuple){
 
@@ -133,7 +138,7 @@ void createUserTable(BufferPoolManager* BPM, string table_name){
 
 void insertIntoUserTable(){
     cout << "--- Inserting 10 records into User table ---" << endl;
-    for (int i = 0; i < 10000; i++) {
+    for (int i = 0; i < 100; i++) {
 
         Field u1 = Field(TYPE_INT, 100 + i);                
         Field u2 = Field(TYPE_STRING, ("First_" + to_string(i)).c_str());
@@ -173,7 +178,7 @@ void createOrderTable(BufferPoolManager* BPM, string table_name){
 
 void insertIntoOrderTable(){
 cout << "\n--- Inserting 10 records into Order table ---" << endl;
-    for (int i = 0; i < 1000000; i++) {
+    for (int i = 0; i < 100; i++) {
         Field o1 = Field(TYPE_INT, 9000 + i);          
         Field o2 = Field(TYPE_INT, 100 + (i%1000));                
         Field o3 = Field(TYPE_FLOAT, static_cast<float>(150.75 + (i * 20.5))); 
@@ -245,9 +250,7 @@ int main() {
     AbstractPredicate* leaf2 = new Predicate(col_id, const_107, PredicateType::LE);
 
     AbstractPredicate* and_gate = new ComplexPredicate(leaf1, leaf2, ComplexPredicateType::AND);
-
     AbstractPredicate* leaf4 = new Predicate(col_last, col_first, PredicateType::EQ);
-
     AbstractPredicate* root_expression = new ComplexPredicate(and_gate, leaf4, ComplexPredicateType::OR);
 
 
@@ -282,6 +285,9 @@ int main() {
     cout<<"executing the query"<<endl;
     Tuple* result_row = new Tuple({});
 
+    for(auto&col:hash_join->get_output_schema()){
+        cout<<col.getColName()<<" ";
+    }
     cout<<endl;
     int counter{0};
     while (hash_join->getNext(result_row)) {

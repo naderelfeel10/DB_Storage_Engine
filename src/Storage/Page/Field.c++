@@ -180,16 +180,35 @@ const char* Field::getFieldValueStr()const {
     return VALUE_STRING;
 }
 
-
+/*
 FieldValue Field::getFieldValue()const{
     if(this->fieldType == TYPE_INT) return this->getFieldValueInt();
     if(this->fieldType == TYPE_FLOAT) return this->getFieldValueFloat();
     if(this->fieldType == TYPE_BOOL) return this->getFieldValueBool();
 
-    return to_string(this->getFieldValueInt());
+    return string(this->getFieldValueStr());
 
 }
+*/
+// updated version
+FieldValue Field::getFieldValue() const
+{
+    switch (fieldType)
+    {
+    case TYPE_INT:
+        return VALUE_INT;
+    case TYPE_FLOAT:
+        return VALUE_FLOAT;
+    case TYPE_BOOL:
 
+        return VALUE_BOOL;
+
+    case TYPE_STRING:
+        return string(VALUE_STRING);
+    default:
+        throw runtime_error("unknown fieldtype");
+    }
+}
 
 
 void Field::serialize(char* buffer){

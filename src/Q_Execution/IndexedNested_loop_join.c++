@@ -4,18 +4,18 @@
 using namespace std;
 
 void IndexedNestedLoopJoin::open(){
-    this->curr_matching_rids.clear();
+    this->inner_matches.clear();
     this->outer_table->open();
-    this->get_output_schema();
+    this->set_output_schema();
 }
 
 void IndexedNestedLoopJoin::close(){
     this->outer_table->close();
 }
 
-vector<Column> IndexedNestedLoopJoin::get_output_schema(){
+void IndexedNestedLoopJoin::set_output_schema(){
     vector<Column> outer_schema = this->outer_table->get_output_schema();
-    vector<Column> inner_schema = this->inner_table_heap->getCols();
+    vector<Column> inner_schema = this->inner_table->getTableHeap()->getCols();
 
     // change col name to be table_name.col_name
     // that's how i can differentiate between cols with same names in diff tables
@@ -25,7 +25,7 @@ vector<Column> IndexedNestedLoopJoin::get_output_schema(){
         outer_schema[i].setColName(table_name+'.'+col_name);
     }
 
-    table_name = inner_table_heap->getTableName();
+    table_name = this->inner_table->getTableHeap()->getTableName();
     for(int i=0; i<inner_schema.size();i++){
         string col_name = inner_schema[i].getColName();
         inner_schema[i].setColName(table_name+'.'+col_name);
@@ -36,57 +36,63 @@ vector<Column> IndexedNestedLoopJoin::get_output_schema(){
 
     this->output_schema = outer_schema;
 
-    return output_schema;
+    //return output_schema;
+}
+
+
+vector<Column> IndexedNestedLoopJoin::get_output_schema(){
+    return this->output_schema;
 }
 
 bool IndexedNestedLoopJoin::getNext(Tuple*tuple){
 
-    // if the inner table does not have any more data for the curr outer tuple:
-    // then check if outer table still have tuples
-    // if yes then update to pointer of inner table to start from the begininig 
-    // else return false as outer table has been finished
-    while(curr_matching_rids.empty()){
-        if(!this->outer_table->getNext(&this->curr_tuple)){
+    // fetch an outer tuple
+    // fetch mathing inner tuples using the index
+    // return inner matches one by one till finishes
+    // loop on this
+
+    // when inner matches is empty, i need to fetch new outer tuple
+    while(this->inner_matches.empty()){
+        // i need to fetch the next outer and find it's matches
+        bool has_outer = this->outer_table->getNext(&this->curr_outer_tuple);
+        // check if outer table is exhausted
+        if(!has_outer){
             return false;
         }
-        // get col name of the index
-        string index_col_name = this->inner_index->get_index_col_name();
-        // get the index of this col
-        int col_index = outer_table->getTableHeap()->getColIndex(index_col_name);
-        //get the targeted field
-        Field search_field = curr_tuple.fields[col_index];
-        //search with it
-        curr_matching_rids = this->inner_index->Search(search_field);
-        
-        this->curr_rid_index = curr_matching_rids.size()-1;
+        //if not :
+        // match with inner table
+        Field search_field = this->curr_outer_tuple.fields[this->col_index];
+        this->inner_matches = this->inner_index->Search(search_field);
     }
+    // get next RID from innner matches
+    RID curr_rid = this->inner_matches.back();
+    this->inner_matches.pop_back();
+    // fetch the tuple from the RID
+    Tuple next_inner_tuple = Tuple({});
+    this->getTuple(curr_rid,next_inner_tuple);
     
-    // still tuples in curr_matching ids (means the inner table is not exuasted yet)
-    RID curr_rid = this->curr_matching_rids[curr_rid_index];
-    this->curr_matching_rids.pop_back();
-    // get next tuple with this rid
-    Tuple next_tuple =  this->inner_table_heap->getTupleFromRID(curr_rid);
+    // prepare the result:
+    vector<Field> outer_fields = this->curr_outer_tuple.fields;
+    vector<Field> inner_fields = next_inner_tuple.fields;
+    outer_fields.insert(outer_fields.end(), inner_fields.begin(), inner_fields.end());
 
-    // i will extract the fields, concat then create new tuple with them
-    vector<Field> fields1 = this->curr_tuple.fields;
-    vector<Field> fields2 = next_tuple.fields;
-    fields1.insert(fields1.end(), fields2.begin(), fields2.end());
-
-    Tuple res_tuple = Tuple(fields1);
-    curr_rid_index--;
-    *tuple = res_tuple;
+    *tuple = Tuple(outer_fields);
     return true;
-
-
-    
 }
 
 
+void IndexedNestedLoopJoin::getTuple(RID rid, Tuple& tuple) {
+
+    char* page_buffer = this->BPM->fetchPage(rid.getPageId());
+    Page* page = reinterpret_cast<Page*>(page_buffer);
+
+    page->getTuple(rid.getSlotNum(), tuple);
+}
 
 ////////////////////////////////////////////
 ///////////////////////////////////////////
 
-
+/*
 vector<string> tables1;
 map<string, TableHeap*>tables_map1;
 map<string, vector<RID>> tables_rids1;
@@ -161,7 +167,7 @@ void insertIntoOrderTable(){
 cout << "\n--- Inserting some records into Order table ---" << endl;
     for (int i = 0; i < 1000000; i++) {
         Field o1 = Field(TYPE_INT, 9000 + i);          
-        Field o2 = Field(TYPE_INT, 100 + (i%1000));                
+        Field o2 = Field(TYPE_INT, 100 + (i%100));                
         Field o3 = Field(TYPE_FLOAT, static_cast<float>(150.75 + (i * 20.5))); 
         Field o4 = Field(TYPE_BOOL, (i % 2 == 0));          
 
@@ -206,7 +212,9 @@ void buildOrderIndex(TableHeap* order_table, const vector<RID>& order_rids, Buff
     tables_indexes["Order"] = s_hash_wrapper;
 }
 
-int main() {
+ 
+int
+main(){
 
     ios_base::sync_with_stdio(false);
     cout.tie(nullptr);
@@ -248,9 +256,7 @@ int main() {
 
 
     AbstractPredicate* join_pred = new Predicate(order_col_id, user_col_id, PredicateType::EQ);
-    AbstractExecuter* indexed_nested_loop_join = new IndexedNestedLoopJoin(seq_scan,tables_indexes1["Order"] ,tables_map1["Order"],join_pred);
-
-
+    AbstractExecuter* indexed_nested_loop_join = new IndexedNestedLoopJoin(BPM,seq_scan, order_seq_scan,tables_indexes1["Order"],join_pred);
 
     indexed_nested_loop_join->open();
 
@@ -258,14 +264,16 @@ int main() {
     Tuple* result_row = new Tuple({});
     int counter{0};
 
+    for(auto&col:indexed_nested_loop_join->get_output_schema()){
+        cout<<col.getColName()<<"   |  ";
+    }
+    cout<<endl;
     while (indexed_nested_loop_join->getNext(result_row)) {
         result_row->print();
         counter++;
     }
-
     cout<<"done"<<endl;
     cout<<"counter : "<<counter<<endl;
-
     indexed_nested_loop_join->close();
 
     auto end1 = chrono::high_resolution_clock::now();
@@ -275,3 +283,4 @@ int main() {
 
     return 0;
 }
+*/

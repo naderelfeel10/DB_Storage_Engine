@@ -47,7 +47,7 @@ class MergeJoin : public AbstractExecuter{
         vector<Tuple>inner_matched_tuples;
         vector<Tuple>res_batch;
         
-
+        vector<Column>table_schema;
 
     public:
         MergeJoin(BufferPoolManager*BPM, AbstractExecuter* outer_table, AbstractExecuter* inner_table, string join_col_name):
@@ -62,7 +62,8 @@ class MergeJoin : public AbstractExecuter{
         TableHeap* getInnerTableHeap(){return this->inner_table->getTableHeap();};
 
         //
-        vector<Column> get_output_schema(){return {};};
+        void set_output_schema();
+        vector<Column> get_output_schema();
 
 };
 #endif

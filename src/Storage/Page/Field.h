@@ -61,6 +61,9 @@ public:
     FieldType getFieldType()const;
 
     bool isNull() ;
+    void set_null(bool value){
+        this->is_null = value;
+    }
     int getSize() ;
     int getSerializedSize() const ;
 

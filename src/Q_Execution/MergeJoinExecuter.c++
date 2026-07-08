@@ -50,7 +50,31 @@ void MergeJoin::open(){
     }*/
     cout<<counter<<endl;
     cout<<"inner tuples num : "<<inner_table_sorted->getTableHeap()->get_tuples_num()<<endl;
+    this->set_output_schema();
+}
 
+void MergeJoin::set_output_schema(){
+    vector<Column> outer_schema = this->outer_table->get_output_schema();
+    vector<Column> inner_schema = this->inner_table->get_output_schema();
+
+    string table_name = this->outer_table->getTableHeap()->getTableName();
+    for(int i=0; i<outer_schema.size();i++){
+        string col_name = outer_schema[i].getColName();
+        outer_schema[i].setColName(table_name+'.'+col_name);
+    }
+
+    table_name = this->inner_table->getTableHeap()->getTableName();
+    for(int i=0; i<inner_schema.size();i++){
+        string col_name = inner_schema[i].getColName();
+        inner_schema[i].setColName(table_name+'.'+col_name);
+    }
+
+    outer_schema.insert(outer_schema.end(), inner_schema.begin(), inner_schema.end());
+    this->table_schema = outer_schema;
+}
+
+vector<Column> MergeJoin::get_output_schema(){
+    return this->table_schema;
 }
 
 bool MergeJoin::getNext(Tuple* tuple){
@@ -237,7 +261,7 @@ void createUserTable(BufferPoolManager* BPM, string table_name){
 
 void insertIntoUserTable(){
     cout << "--- Inserting 10 records into User table ---" << endl;
-    for (int i = 0; i < 10000; i++) {
+    for (int i = 0; i < 100; i++) {
 
         Field u1 = Field(TYPE_INT, 100 + i);                
         Field u2 = Field(TYPE_STRING, ("First_" + to_string(i)).c_str());
@@ -276,7 +300,7 @@ void createOrderTable(BufferPoolManager* BPM, string table_name){
 
 void insertIntoOrderTable(){
 cout << "\n--- Inserting some records into Order table ---" << endl;
-    for (int i = 0; i < 1000000; i++) {
+    for (int i = 0; i < 100; i++) {
         Field o1 = Field(TYPE_INT, 9000 + i);          
         Field o2 = Field(TYPE_INT, 100 + (i%1000));                
         Field o3 = Field(TYPE_FLOAT, static_cast<float>(150.75 + (i * 20.5))); 
@@ -330,6 +354,10 @@ int main() {
     cout<<"executing the query"<<endl;
     Tuple* result_row = new Tuple({});
     
+    for(auto&col:merge_join->get_output_schema()){
+        cout<<col.getColName()<<" ";
+    }
+    cout<<endl;
     int counter{0};
     while (merge_join->getNext(result_row)) {
         result_row->print();

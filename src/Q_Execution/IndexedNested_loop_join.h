@@ -1,5 +1,4 @@
 #ifndef INDEX_NESTED_LOOP_JOIN_H
-
 #define INDEX_NESTED_LOOP_JOIN_H
 
 #include"../Storage/Table/TableIterator.h"
@@ -19,19 +18,30 @@ using namespace std;
 class IndexedNestedLoopJoin: public AbstractExecuter{
     
     private:
+        // outer table
+        // inner index
         AbstractExecuter* outer_table;
         Index* inner_index;
-        TableHeap* inner_table_heap;
+        AbstractExecuter* inner_table;
         AbstractPredicate* join_condition;
+        BufferPoolManager* BPM;
 
-        Tuple curr_tuple;
+        Tuple curr_outer_tuple = Tuple({});
         vector<Column> output_schema;
-        vector<RID> curr_matching_rids;
-        int curr_rid_index{0};
+        vector<RID> inner_matches;
+
+        int col_index;
+
     
     public:
-        IndexedNestedLoopJoin(AbstractExecuter* outer_table,Index* inner_index ,TableHeap* inner_table_heap, AbstractPredicate* join_condition):
-        outer_table(outer_table),inner_index(inner_index), inner_table_heap(inner_table_heap),join_condition(join_condition),curr_tuple({}){}
+        IndexedNestedLoopJoin(BufferPoolManager* BPM,AbstractExecuter* outer_table,AbstractExecuter* inner_table,
+        Index* inner_index, AbstractPredicate* join_condition):
+        BPM(BPM),outer_table(outer_table),inner_table(inner_table), inner_index(inner_index),join_condition(join_condition){
+
+            string col_index_name  = inner_index->get_index_col_name();
+            cout<<col_index_name<<endl;
+            this->col_index = this->outer_table->getTableHeap()->getColIndex(col_index_name);
+        }
 
         void open();
         void close();
@@ -39,10 +49,10 @@ class IndexedNestedLoopJoin: public AbstractExecuter{
 
         TableHeap* getTableHeap(){return nullptr;};
         TableHeap* getOuterTableHeap(){return this->outer_table->getTableHeap();};
-        TableHeap* getInnerTableHeap(){return this->inner_table_heap;};
-
+        
+        void getTuple(RID rid, Tuple& tuple);
+        void set_output_schema();
         vector<Column> get_output_schema();
 
 };
-
 #endif

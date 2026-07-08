@@ -45,7 +45,7 @@ class HashJoin: public AbstractExecuter{
         TableHeap* getTableHeap(){return nullptr;};
         TableHeap* getOuterTableHeap(){return this->outer_table->getTableHeap();};
         TableHeap* getInnerTableHeap(){return this->inner_table->getTableHeap();};
-
+        void set_output_schema();
         vector<Column> get_output_schema();
 
 };

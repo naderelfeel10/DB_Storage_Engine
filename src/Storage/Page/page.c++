@@ -204,6 +204,24 @@ vector<Field> Page::get_field_from_all_tuples(int col_index){
     return res;
 }
 
+vector<vector<Field>> Page::get_custom_fields_from_all_tuples(vector<int> col_indexes){
+
+    PageHeader* header = reinterpret_cast<PageHeader*>(data);
+    vector<vector<Field>> res;
+    // i want to return custom fields from the page, not the whole tuple
+    for(int i=0;i<header->num_tuples;i++){
+        vector<Field> tmp_res;
+        Tuple tuple({});
+        this->getTuple(i,tuple);
+        for(auto&col_index:col_indexes){
+            tmp_res.push_back(tuple.fields[col_index]);
+        }
+        res.push_back(tmp_res);
+    }
+
+    return res;
+}
+
 char* Page::getData(){
     return this->data;
 }
