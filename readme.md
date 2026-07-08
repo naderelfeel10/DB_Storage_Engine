@@ -14,6 +14,7 @@ A disk-based relational database engine implemented in modern C++, designed to s
 | **Query Execution** | Volcano-style iterator model for (seq scan, select, project) |
 | **Join Algorithms** | Nested Loop, Indexed Nested Loop, Hash Join, Merge-Sort Join |
 | **Sorting** | External Merge Sort - sorts datasets larger than memory |
+| **Aggregation** | sort based aggregation - groups table rows into one representitive row |
 | **Persistence** | Full crash recovery - tables, indexes, metadata survive restarts |
 
 ---
@@ -23,7 +24,8 @@ A disk-based relational database engine implemented in modern C++, designed to s
 ```
 ┌──────────────────────────────────────────────────┐
 │              Query Execution Engine               │
-│   SeqScan │ Select │ Project │ Join │ ExMergeSort │
+│   SeqScan │ Select │ Project │ Join │ ExMergeSort |
+|            | Aggregation                          |
 └────────────────────┬─────────────────────────────┘
                      │
 ┌────────────────────▼─────────────────────────────┐
@@ -68,6 +70,7 @@ A disk-based relational database engine implemented in modern C++, designed to s
 │   └── Q_Execution/
 │       ├── AbstractPredicate.h
 │       ├── ComplexPredicate.cpp
+│       ├── AggregationExecuter.cpp
 │       ├── ExternalMergeSortExecuter.cpp
 │       ├── MergeJoinExecuter.cpp
 │       ├── hash_join.cpp
@@ -278,8 +281,7 @@ No manual rebuild step — the engine reconstructs itself entirely from disk pag
 
 ## near roadmap
 
-- [ ] Aggregation operators (`COUNT`, `SUM`, `AVG`, `GROUP BY`)
-- [ ] Query Optimizer
+- [ ] Query Optimizer :)
 ---
 
 ##  Build & Run
