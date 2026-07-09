@@ -1,8 +1,8 @@
 #include<iostream>
-#include"AggregationExecuter.h"
+#include"SortAggregateExecuter.h"
 using namespace std;
 
-void AggregationExecuter::open(){
+void SortAggregateExecuter::open(){
     this->table->open();
     set_output_schema();
     //i will sort the table based on grouping key
@@ -16,12 +16,12 @@ void AggregationExecuter::open(){
 
 
 
-void AggregationExecuter::close(){
+void SortAggregateExecuter::close(){
     this->table->close();
 }
 
 
-void AggregationExecuter::set_output_schema(){
+void SortAggregateExecuter::set_output_schema(){
     //output grouping vector + grouping functions   
     int size = this->grouping_keys.size();
     for(int i=0;i<size;i++){
@@ -42,12 +42,12 @@ void AggregationExecuter::set_output_schema(){
 
 
 
-vector<Column> AggregationExecuter::get_output_schema(){
+vector<Column> SortAggregateExecuter::get_output_schema(){
     return this->output_schema;
 }
 
 
-string AggregationExecuter::get_function_string(GroupingFunction func){
+string SortAggregateExecuter::get_function_string(GroupingFunction func){
     switch (func.grouping_type)
     {
     case SUM:
@@ -71,7 +71,7 @@ string AggregationExecuter::get_function_string(GroupingFunction func){
     }
 
 }
-vector<Field> AggregationExecuter::get_grouping_fields(Tuple tuple){
+vector<Field> SortAggregateExecuter::get_grouping_fields(Tuple tuple){
     vector<Field> tmp_fields_vector;
     for(int&index:this->grouping_keys){
         Field tmp_f =  tuple.fields[index];
@@ -81,7 +81,7 @@ vector<Field> AggregationExecuter::get_grouping_fields(Tuple tuple){
 }
 
 
-void AggregationExecuter::update_aggregate(){
+void SortAggregateExecuter::update_aggregate(){
     for(size_t i{0};i<this->grouping_functions.size();i++){
         //fetch function type 
         AggregateType grouping_type = grouping_functions[i].grouping_type;
@@ -130,7 +130,7 @@ void AggregationExecuter::update_aggregate(){
     }
 }
 
-Tuple AggregationExecuter::get_output_tuple(){
+Tuple SortAggregateExecuter::get_output_tuple(){
     
     vector<Field>functions_fields;
     int size =this->grouping_functions.size();
@@ -167,7 +167,7 @@ Tuple AggregationExecuter::get_output_tuple(){
 }
 
 
-bool AggregationExecuter::is_same_group(){
+bool SortAggregateExecuter::is_same_group(){
     for(int i{0};i<this->curr_grouping_fields.size();i++){
         if(this->curr_grouping_fields[i] == this->next_tuple.fields[this->grouping_keys[i]] ){
             continue;
@@ -177,7 +177,7 @@ bool AggregationExecuter::is_same_group(){
     return true;
 }
 //////
-bool AggregationExecuter::getNext(Tuple* tuple){
+bool SortAggregateExecuter::getNext(Tuple* tuple){
     // check if it still have data
     if(!has_tuple){
          return false;
@@ -216,7 +216,7 @@ bool AggregationExecuter::getNext(Tuple* tuple){
     return false;
 }
 
-
+/*
 vector<string> tables1;
 map<string, TableHeap*>tables_map1;
 map<string, vector<RID>> tables_rids1;
@@ -283,7 +283,7 @@ main(){
     GroupingFunction gf2 = GroupingFunction();
     gf2.grouping_type = AVG;
     gf2.function_key = 3;
-    AggregationExecuter* group_by = new AggregationExecuter(BPM, seq_scan, {0}, {gf1, gf2});
+    SortAggregateExecuter* group_by = new SortAggregateExecuter(BPM, seq_scan, {0}, {gf1, gf2});
 
     group_by->open();
     cout<<"select result"<<endl;
@@ -301,4 +301,4 @@ main(){
 
     cout<<"done"<<endl;
 
-}
+}*/

@@ -1,6 +1,6 @@
-#ifndef AGG_EXECUTER_H
+#ifndef HASH_AGG_EXECUTER_H
 
-#define AGG_EXECUTER_H
+#define HASH_AGG_EXECUTER_H
 
 #include<unordered_map>
 #include <map>
@@ -26,6 +26,7 @@ enum AggregateType {COUNT, SUM, AVG, MAX, MIN};
 struct AggValues{
     long counter{0};
     double value{0.0};
+
 };
 
 struct GroupingFunction{
@@ -33,7 +34,7 @@ struct GroupingFunction{
     int function_key;
 };
 
-class AggregationExecuter: public AbstractExecuter{
+class HashAggregateExecuter: public AbstractExecuter{
     
     private:
         //passed in the the constuctor
@@ -41,19 +42,24 @@ class AggregationExecuter: public AbstractExecuter{
         vector<int> grouping_keys;
         vector<GroupingFunction> grouping_functions;
         BufferPoolManager* BPM;
-        //hold new sorted table 
-        AbstractExecuter* sorted_table;
+        // i insert and update group state in this map
+        map<vector<Field>, vector<AggValues>>groups_map;
+        //this will hold data from groups_map after finishing hashing
+        vector<vector<Field>>groups;
+        vector<vector<AggValues>>states;
 
-        vector<Column> output_schema;
-        // keeping state of everything(next tuple, grouping keys, agg_state)
-        Tuple next_tuple = Tuple({});
+        vector<AggValues>agg_state;
+        vector<Field> curr_group;
+
+        Tuple curr_tuple = Tuple({});
         bool has_tuple;
-        vector<Field> curr_grouping_fields;
-        vector<AggValues> agg_state;
-
+        int curr_group_index{0};
+        
+        
+        vector<Column>output_schema;
 
     public:
-        AggregationExecuter(BufferPoolManager* BPM, AbstractExecuter*table, vector<int> grouping_keys, vector<GroupingFunction> grouping_functions ):
+        HashAggregateExecuter(BufferPoolManager* BPM, AbstractExecuter*table, vector<int> grouping_keys, vector<GroupingFunction> grouping_functions ):
             BPM(BPM),table(table), grouping_keys(grouping_keys), grouping_functions(grouping_functions){
                 agg_state.assign(grouping_functions.size(), AggValues{});
             };
@@ -68,7 +74,7 @@ class AggregationExecuter: public AbstractExecuter{
 
         vector<Field> get_grouping_fields(Tuple tuple);
         void update_aggregate();
-        Tuple get_output_tuple();
+        Tuple get_output_tuple(vector<Field>curr_grouping_fields,vector<AggValues>agg_state);
         bool is_same_group();
         string get_function_string(GroupingFunction func);
 };
