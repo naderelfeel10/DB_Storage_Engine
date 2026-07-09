@@ -14,7 +14,7 @@ A disk-based relational database engine implemented in modern C++, designed to s
 | **Query Execution** | Volcano-style iterator model for (seq scan, select, project) |
 | **Join Algorithms** | Nested Loop, Indexed Nested Loop, Hash Join, Merge-Sort Join |
 | **Sorting** | External Merge Sort - sorts datasets larger than memory |
-| **Aggregation** | sort based aggregation - groups table rows into one representitive row |
+| **Aggregation** | Sort and Hashed based aggregation - groups table rows into one representitive row |
 | **Persistence** | Full crash recovery - tables, indexes, metadata survive restarts |
 
 ---
@@ -70,7 +70,8 @@ A disk-based relational database engine implemented in modern C++, designed to s
 │   └── Q_Execution/
 │       ├── AbstractPredicate.h
 │       ├── ComplexPredicate.cpp
-│       ├── AggregationExecuter.cpp
+│       ├── HashAggregateExecuter.cpp
+│       ├── SortAggregateExecuter.cpp
 │       ├── ExternalMergeSortExecuter.cpp
 │       ├── MergeJoinExecuter.cpp
 │       ├── hash_join.cpp
