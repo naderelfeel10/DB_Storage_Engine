@@ -9,6 +9,7 @@ TableInfo* Catalog::CreateTable(string table_name, vector<Column>schema){
         cerr<<"this table already exists"<<endl;
         return nullptr;       
     }else{
+        //prepare table meta data, then create tableInfo
         TableHeap* heap = new TableHeap(BPM, -1, -1);
         auto* info = new TableInfo();
         info->table_name = table_name;
