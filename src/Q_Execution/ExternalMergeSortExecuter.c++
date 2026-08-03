@@ -535,7 +535,6 @@ void insertIntoUserTable(){
     }
 }
 
-
 int
 main(){
 
@@ -568,5 +567,4 @@ main(){
 
 
 }
-
 */

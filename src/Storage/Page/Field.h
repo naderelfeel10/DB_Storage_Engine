@@ -67,7 +67,7 @@ public:
     int getSize() ;
     int getSerializedSize() const ;
 
-    void print() ;
+    void print();
     void serialize(char* buffer);
     void deserialize(char* buffer);
 

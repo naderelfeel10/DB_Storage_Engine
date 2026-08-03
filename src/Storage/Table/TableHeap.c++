@@ -597,6 +597,29 @@ Tuple TableHeap::getTupleFromRID(RID rid){
     return tmp_tuple;
 }
 
+void TableHeap::deleteTableHeap(){
+    //to delete the table:
+    //1. walk through every page starting with first_page_id till last page_id
+    int next_page_id = first_page_id;
+    while(next_page_id!=-1){
+        // fetch the page
+        char* buffer = BPM->fetchPage(next_page_id);
+        if(buffer == nullptr)return;
+
+        PageHeader* header = reinterpret_cast<PageHeader*>(buffer);
+
+        int curr_id = next_page_id;
+        //move to the next one
+        next_page_id = header->next_page_id;
+
+        //delete it 
+        BPM->deletePage(curr_id);
+    }
+
+    first_page_id =-1;
+    last_page_id =-1;
+}
+
 TableHeap::~TableHeap(){
     saveMetaData();
 }

@@ -183,7 +183,7 @@ void createUserTable(BufferPoolManager* BPM, string table_name){
 
 void insertIntoUserTable(){
     cout << "--- Inserting some records into User table ---" << endl;
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 1000; i++) {
 
         Field u1 = Field(TYPE_INT, 100 + i);                
         Field u2 = Field(TYPE_STRING, ("First_" + to_string(i)).c_str());
@@ -222,13 +222,9 @@ void createOrderTable(BufferPoolManager* BPM, string table_name){
 
 void insertIntoOrderTable(){
 cout << "\n--- Inserting some records into Order table ---" << endl;
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 10000; i++) {
         Field o1 = Field(TYPE_INT, 9000 + i);          
-        Field o2;
-        if(i%5 ==0)
-            o2 = Field(TYPE_INT, 100 + (i+100));
-        else 
-            o2 = Field(TYPE_INT, 100 + (i));                
+        Field o2 = Field(TYPE_INT, 100 + (i%100));                
         Field o3 = Field(TYPE_FLOAT, static_cast<float>(150.75 + (i * 20.5))); 
         Field o4 = Field(TYPE_BOOL, (i % 2 == 0));          
 
@@ -263,7 +259,7 @@ int main() {
 
     //Order.user_id = User.user_id
     AbstractPredicate* join_pred = new Predicate(order_col_id, user_col_id, PredicateType::EQ);
-    AbstractExecuter* nested_loop_join = new NestedLoopJoin(seq_scan, order_seq_scan,join_pred, LEFT_JOIN);
+    AbstractExecuter* nested_loop_join = new NestedLoopJoin(seq_scan, order_seq_scan,join_pred, INNER_JOIN);
 
 
     auto st1 = chrono::high_resolution_clock::now();

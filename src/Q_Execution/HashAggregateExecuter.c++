@@ -1,5 +1,6 @@
 #include<iostream>
 #include"HashAggregateExecuter.h"
+#include<chrono>
 using namespace std;
 
 
@@ -249,7 +250,7 @@ void createUserTable(BufferPoolManager* BPM, string table_name){
 
 void insertIntoUserTable(){
     cout << "--- Inserting some records into User table ---" << endl;
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 1000000; i++) {
 
         Field u1 = Field(TYPE_INT, 100 + i%10);                
         Field u2 = Field(TYPE_STRING, ("First_" + to_string(i%10)).c_str());
@@ -265,15 +266,19 @@ void insertIntoUserTable(){
 
 int
 main(){
-
     string DB_name = "testSeqScanDB";
     DiskManager* dm = new DiskManager(DB_name);
     BufferPoolManager* BPM = new BufferPoolManager(dm);
 
     // 1. User (user_id int, firstName varchar(30), lastName varchar(30), age int)
     createUserTable(BPM, "User");
+    auto st1 = chrono::high_resolution_clock::now();
     insertIntoUserTable();
+    auto end1 = chrono::high_resolution_clock::now();
+    auto duration1 = chrono::duration_cast<chrono::microseconds>(end1 - st1);
+    cout << "inserting 1,000,000 tuple: " << duration1.count() << " microseconds" << endl;
 
+    /*
     AbstractExecuter* seq_scan = new SeqScan(tables_map1["User"]);
 
     GroupingFunction gf1 = GroupingFunction();
@@ -309,5 +314,6 @@ main(){
     }
 
     cout<<"done"<<endl;
+    */
 
 }

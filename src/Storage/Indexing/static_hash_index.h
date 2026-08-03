@@ -163,7 +163,7 @@ void deserialize(char* data, int &size){
 class hashIndex {
 
     private:
-
+    
         vector<optional<hashEntry>> hashTable;
         FieldType field_type;
         int col_index;

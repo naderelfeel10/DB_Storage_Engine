@@ -4,7 +4,6 @@
 using namespace std;
 
 void IndexedNestedLoopJoin::open(){
-    this->inner_matches.clear();
     this->outer_table->open();
     this->set_output_schema();
 }
@@ -44,36 +43,39 @@ vector<Column> IndexedNestedLoopJoin::get_output_schema(){
     return this->output_schema;
 }
 
+
 bool IndexedNestedLoopJoin::getNext(Tuple*tuple){
+    
+    //fetch a tuple from outer table
+    // extract key the index is built on
+    // search through the index using this key
+       // this will return a vector of matched results [t1, t10, t67];
+    // return matched tuples one by one 
 
-    // fetch an outer tuple
-    // fetch mathing inner tuples using the index
-    // return inner matches one by one till finishes
-    // loop on this
-
-    // when inner matches is empty, i need to fetch new outer tuple
-    while(this->inner_matches.empty()){
-        // i need to fetch the next outer and find it's matches
+    while(inner_matches.empty()){
         bool has_outer = this->outer_table->getNext(&this->curr_outer_tuple);
-        // check if outer table is exhausted
+        // if no more outer tuples, then end the join and return false
         if(!has_outer){
             return false;
         }
-        //if not :
-        // match with inner table
-        Field search_field = this->curr_outer_tuple.fields[this->col_index];
-        this->inner_matches = this->inner_index->Search(search_field);
+        //else :
+        //fetch matches from the index:
+        //[id, name, salary]
+        Field search_field = this->curr_outer_tuple.fields[col_index];
+        this->inner_matches =  this->inner_index->Search(search_field);
     }
-    // get next RID from innner matches
+
+    // if not empty:
+    //consume tuples from this inner matches tuples
     RID curr_rid = this->inner_matches.back();
     this->inner_matches.pop_back();
-    // fetch the tuple from the RID
-    Tuple next_inner_tuple = Tuple({});
-    this->getTuple(curr_rid,next_inner_tuple);
-    
-    // prepare the result:
+    //fetch the tuple of this RID 
+    Tuple inner_tuple = Tuple({});
+    this->getTuple(curr_rid, inner_tuple);
+
+    // outer_tuple + inner_tuple
     vector<Field> outer_fields = this->curr_outer_tuple.fields;
-    vector<Field> inner_fields = next_inner_tuple.fields;
+    vector<Field> inner_fields = inner_tuple.fields;
     outer_fields.insert(outer_fields.end(), inner_fields.begin(), inner_fields.end());
 
     *tuple = Tuple(outer_fields);
@@ -126,7 +128,7 @@ void createUserTable(BufferPoolManager* BPM, string table_name){
 
 void insertIntoUserTable(){
     cout << "--- Inserting 10 records into User table ---" << endl;
-    for (int i = 0; i < 10000; i++) {
+    for (int i = 0; i < 100; i++) {
 
         Field u1 = Field(TYPE_INT, 100 + i);                
         Field u2 = Field(TYPE_STRING, ("First_" + to_string(i)).c_str());
@@ -165,9 +167,9 @@ void createOrderTable(BufferPoolManager* BPM, string table_name){
 
 void insertIntoOrderTable(){
 cout << "\n--- Inserting some records into Order table ---" << endl;
-    for (int i = 0; i < 1000000; i++) {
+    for (int i = 0; i < 100; i++) {
         Field o1 = Field(TYPE_INT, 9000 + i);          
-        Field o2 = Field(TYPE_INT, 100 + (i%100));                
+        Field o2 = Field(TYPE_INT, 100 + (i%10));                
         Field o3 = Field(TYPE_FLOAT, static_cast<float>(150.75 + (i * 20.5))); 
         Field o4 = Field(TYPE_BOOL, (i % 2 == 0));          
 
@@ -228,22 +230,6 @@ main(){
 
     AbstractExecuter* seq_scan = new SeqScan(tables_map1["User"]);
 
-    Column* col_id = new Column(TYPE_INT, "user_id", 4);    //TUPLE[0]
-    Column* col_first = new Column(TYPE_STRING, "firstName", 30); //TUPLE[1]
-    Column* col_last = new Column(TYPE_STRING, "lastName", 30);   //TUPLE[2]
-
-    //(TUPLE[0] > 102) AND (TUPLE[0] <= 107)
-    Column* const_102 = new Column(new Field(TYPE_INT, 102), "C102",4);
-    AbstractPredicate* leaf1 = new Predicate(col_id, const_102, PredicateType::GT);
-
-    Column* const_107 = new Column(new Field(TYPE_INT, 107), "C107",4);
-    AbstractPredicate* leaf2 = new Predicate(col_id, const_107, PredicateType::LE);
-    AbstractPredicate* and_gate = new ComplexPredicate(leaf1, leaf2, ComplexPredicateType::AND);
-    AbstractPredicate* leaf4 = new Predicate(col_last, col_first, PredicateType::EQ);
-    AbstractPredicate* root_expression = new ComplexPredicate(and_gate, leaf4, ComplexPredicateType::OR);
-    AbstractExecuter* select = new Select(seq_scan, root_expression);
-    vector<string>projection_cols = {"user_id","firstName"};
-    //Projection* projection = new Projection(select, projection_cols);
 
     createOrderTable(BPM, "Order");
     insertIntoOrderTable();

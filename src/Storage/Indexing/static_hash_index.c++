@@ -65,7 +65,6 @@ void hashIndex::insertIndex(Field key, RID value){
        //key.print();
         size_t index = hashFunction(key); 
         //cout<<"index : "<<index<<endl;
-        
         if(hashTable[index].has_value()){
 
             hashEntry* curr_hash_entry = &hashTable[index].value();
