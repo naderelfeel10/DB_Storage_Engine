@@ -12,26 +12,35 @@
 
 using namespace std;
 
+
 class Binder {
 private:
     Catalog* catalog;
     BindContext* context;
 
 public:
-    Binder(Catalog* catalog);
+    Binder(Catalog* catalog, BindContext* context){
+        this->catalog = catalog;
+        this->context = context;
+    }
+    
     std::unique_ptr<BoundStatement> bind(const hsql::SQLStatement* statement);
-
+    //bind selectr statement
     BoundSelectStatement* BindSelect(const hsql::SelectStatement* statement);
-
+    //sub functions used in main ones
     BoundExpression* BindExpression( hsql::Expr* expression);
-
-
+    //expression types thaat i need to bind
     BoundExpression* BindColumnRef(const hsql::Expr* expression);
     BoundExpression* BindIntegerLiteral(hsql::Expr* expression);
     BoundExpression* BindFloatLiteral(hsql::Expr* expression);
     BoundExpression* BindStringLiteral(hsql::Expr* expression);
     BoundExpression* BindOperator(hsql::Expr* expression);
     BoundExpression* BindFunction(hsql::Expr* expression);
+
+    BoundOperatorType BindBinaryOperator(hsql::OperatorType op);
+    BoundExpression* BindOperator(const hsql::Expr* expression);
+    //select statement bind sub-functions
+    void BindFrom( const hsql::SelectStatement* statement, BoundSelectStatement& bound);
 
 };
 
