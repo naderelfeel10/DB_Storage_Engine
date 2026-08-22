@@ -35,6 +35,7 @@ struct TableInfo
         
         //uint32_t table_id;
         string table_name;
+        int table_id;
         vector<Column> schema;
 
         int first_page_id;

@@ -227,6 +227,10 @@ void Catalog::load_catalog(int page_id=1){
             memcpy(buffer+offset, table_name.data(), table_name.size());
             offset += table_name.size();
 
+            //save table_id
+            memcpy(buffer+offset, &table_id, sizeof(table_id));
+            offset += sizeof(table_id);
+
             //save first page_id of the table
             memcpy(buffer+offset, &first_page_id, sizeof(first_page_id));
             offset += sizeof(first_page_id);
@@ -278,10 +282,15 @@ void Catalog::load_catalog(int page_id=1){
             //load table name len
             memcpy(&len, buffer + offset, sizeof(len));
             offset += sizeof(len);
+            
             //load table name
             table_name.assign(buffer + offset, len);
             offset += len;
         
+            //load table_id
+            memcpy(&table_id, buffer + offset, sizeof(table_id));
+            offset += sizeof(table_id);
+
             //load the first page id
             memcpy(&first_page_id, buffer + offset, sizeof(first_page_id));
             offset += sizeof(first_page_id);
