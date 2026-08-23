@@ -22,10 +22,18 @@ enum class JoinType {
     RIGHT
 };
 
-struct BoundJoinClause {
-    JoinType type;
-    BoundTable right_table;
-    BoundExpression* condition;
+class BoundJoinClause{
+
+    public:
+        JoinType type;
+        BoundTable right_table;
+        BoundExpression* condition;
+        
+        BoundJoinClause(JoinType type, BoundTable right_table, BoundExpression*condition){
+            this->type = type;
+            this->right_table;
+            this->condition = condition;
+        }
 };
 
 
@@ -37,9 +45,15 @@ struct BoundSelectItem {
 // order by is just asc or desc 
 enum class OrderType { ASC, DESC };
 
-struct BoundOrderBy{ 
-    BoundExpression* expression;// a colto sort on
-    OrderType order_type = OrderType::ASC;
+class BoundOrderBy{ 
+    public:
+        BoundExpression* expression;// a col to sort on
+        OrderType order_type = OrderType::ASC;
+
+        BoundOrderBy(BoundExpression* expr, OrderType order_type){
+            this->expression = expr;
+            this->order_type = order_type;
+        }
 };
 
 

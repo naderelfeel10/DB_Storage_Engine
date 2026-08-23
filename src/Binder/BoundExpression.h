@@ -5,6 +5,7 @@
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Page\Field.h"
 //#include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Binder\Expression.h"
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Table\Column.h"
+#include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\parser\external\sql-parser\src\sql\Expr.h"
 
 #include<iostream>
 #include<vector>
@@ -33,14 +34,16 @@ enum class ExpressionType {
         column_oid = 2
         return_type = INT*/
 
-class BoundColumnRef: BoundExpression{
+class BoundColumnRef:  public BoundExpression{
 
+public:
     int table_oid;
     int column_oid;
 
     string table_name;
     string column_name;
 
+    BoundColumnRef();
     //this constuctor recieves input from the parser output, then creates the BoundedCol
     BoundColumnRef(int table_oid, int column_oid, const string& table_name, const string& column_name, FieldType return_type)
         :table_oid(table_oid), column_oid(column_oid), table_name(table_name), column_name(column_name){
@@ -56,7 +59,7 @@ BoundTable
     alias = u
 */
 class BoundTable{
-
+    public:
     int table_oid;
 
     string table_name;
@@ -65,7 +68,7 @@ class BoundTable{
 };
 
 
-class BoundConstantExpression : BoundExpression {
+class BoundConstantExpression : public BoundExpression {
 
     // union of possible values the const might have:
     // int, double, cool, string
@@ -114,19 +117,33 @@ enum class BinaryOperator{
     LT, 
     LE 
 };
+enum class BoundOperatorType {
+    EQ,
+    NE,
+    GT,
+    GE,
+    LT,
+    LE,
+    AND,
+    OR,
+    ADD,
+    SUB,
+    MUL,
+    DIV
+};
 
-class BoundBinaryExpression : BoundExpression{
 
+class BoundBinaryExpression : public BoundExpression{
+
+public:
     // a simple representation of the predicate
     BoundExpression* left;
     BoundExpression* right;
 
-    BinaryOperator op;
+    BoundOperatorType op;
 
-    BoundBinaryExpression(BoundExpression* left, BinaryOperator op,
-                          BoundExpression* right, FieldType return_type):
-                          left(left), right(right),op(op){
-                            
+    BoundBinaryExpression(BoundExpression* left, BoundOperatorType op,BoundExpression* right, FieldType return_type)
+                        :left(left), right(right),op(op){
         exp_type = ExpressionType::BINARY;
         this->return_type = return_type;
     }
