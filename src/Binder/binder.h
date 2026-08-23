@@ -9,6 +9,7 @@
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Binder\BoundExpression.h"
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Binder\BoundSelectStatement.h"
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Binder\BindContext.h"
+#include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Binder\BoundSelectStatement.h"
 
 using namespace std;
 
@@ -41,6 +42,9 @@ public:
     BoundExpression* BindOperator(const hsql::Expr* expression);
     //select statement bind sub-functions
     void BindFrom( const hsql::SelectStatement* statement, BoundSelectStatement& bound);
+
+    BoundJoinClause BindJoin(const hsql::JoinDefinition* join);
+    JoinType BindJoinType(hsql::JoinType type);
 
 };
 

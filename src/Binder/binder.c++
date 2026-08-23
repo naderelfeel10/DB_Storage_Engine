@@ -64,11 +64,20 @@ BoundSelectStatement* Binder::BindSelect(const hsql::SelectStatement* statement)
     if(statement ==nullptr)
         throw runtime_error("cannot bind null SELECT statement");
     
+
+    // main components of this statement :
     // boundSelectStatement is the output I need to return 
     auto* bound = new BoundSelectStatement();
-    // main components of this statement :
-    
+
+    //FROM
+    BindFrom(statement, *bound);
+
+    //JOIN
+    BoundJoinClause bind_join = BindJoin(statement->fromTable->join);
+    bound->joins.push_back(bind_join);
+
     //select list :
+
     //loop through each expr in select list, resolve it's expression, then add it to bound list
     for(auto&expr : *statement->selectList){
         BoundSelectItem item;
@@ -79,11 +88,6 @@ BoundSelectStatement* Binder::BindSelect(const hsql::SelectStatement* statement)
         bound->select_list.push_back(item);
     }
 
-    //FROM
-    BindFrom(statement, *bound);
-
-    //JOIN
-    BindJoins(statement, *bound);
 
     //WHERE, where is just an expression 
     if(statement->whereClause != nullptr)
@@ -99,11 +103,12 @@ BoundSelectStatement* Binder::BindSelect(const hsql::SelectStatement* statement)
     if(statement->groupBy->having != nullptr){
         bound->having = BindExpression(statement->groupBy->having);
     }
+
     // ORDER BY
-    BindOrderBy(statement, *bound);
+    BindOrderBy(statement);
 
     // LIMIT adn OFSSET
-    BindLimitOffset(statement, *bound);
+    BindLimitOffset(statement);
 
     
     return bound;
@@ -304,6 +309,77 @@ void Binder::BindFrom( const hsql::SelectStatement* statement, BoundSelectStatem
     // last thing to add the table to the context
     context->AddTable(bound_table);
 }
+
+
+
+// join :
+//type conversion from AST type and my defined type
+JoinType Binder::BindJoinType(hsql::JoinType type){
+
+    switch (type){
+        case hsql::kJoinInner:
+            return JoinType::INNER;
+
+        case hsql::kJoinLeft:
+            return JoinType::LEFT;
+
+        case hsql::kJoinRight:
+            return JoinType::RIGHT;
+
+        default:
+            throw runtime_error("unsupported join type");
+    }
+}
+
+
+
+// binding join clause
+BoundJoinClause Binder::BindJoin(const hsql::JoinDefinition* join){
+
+    //join has left, right, condition, and join type
+    // first get right table
+
+    string alias = join->right->alias->name;
+    string table_name = join->right->name;
+    // now extract the table from the catalog, 
+    TableInfo* table_info = catalog->GetTable(table_name);
+
+    // check if table name exists in the catalog
+    if(!table_info){
+        throw runtime_error(" table does not exist: " +table_name);
+    }
+    // now bound the table 
+    BoundTable bound_table;
+
+    bound_table.table_oid = table_info->table_id;
+    bound_table.table_name = table_name;
+    bound_table.alias = alias;
+    bound_table.schema = table_info->schema;
+
+
+    // last thing to add the table to the context
+    context->AddTable(bound_table);
+
+
+    BoundExpression* condition = nullptr;
+    // extract on operator
+    if(join->condition != nullptr){
+        //extract the condition
+        condition = BindExpression(join->condition);
+        //it has to be bool
+        if(condition->return_type != TYPE_BOOL){
+            throw runtime_error("JOIN condition must evaluate to BOOLEAN");
+        }
+    }
+
+    JoinType type =BindJoinType(join->type);
+
+    BoundJoinClause result(type, bound_table, condition);
+
+    return result;
+}
+
+
 
 int
 main(){
