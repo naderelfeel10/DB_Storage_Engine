@@ -10,7 +10,8 @@
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Binder\BoundSelectStatement.h"
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Binder\BindContext.h"
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Binder\BoundSelectStatement.h"
-
+#include "D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\parser\external\sql-parser\src\SQLParser.h"
+#include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\parser\external\sql-parser\src\sql\SQLStatement.h"
 using namespace std;
 
 
@@ -32,20 +33,23 @@ public:
     BoundExpression* BindExpression( hsql::Expr* expression);
     //expression types thaat i need to bind
     BoundExpression* BindColumnRef(const hsql::Expr* expression);
-    BoundExpression* BindIntegerLiteral(hsql::Expr* expression);
-    BoundExpression* BindFloatLiteral(hsql::Expr* expression);
-    BoundExpression* BindStringLiteral(hsql::Expr* expression);
-    BoundExpression* BindOperator(hsql::Expr* expression);
-    BoundExpression* BindFunction(hsql::Expr* expression);
+
+    BoundExpression* BindIntegerLiteral(hsql::Expr* expression){return nullptr;}
+    BoundExpression* BindFloatLiteral(hsql::Expr* expression){return nullptr;}
+    BoundExpression* BindStringLiteral(hsql::Expr* expression){return nullptr;}
+    BoundExpression* BindOperator(const hsql::Expr* expression);
+    BoundExpression* BindFunction(hsql::Expr* expression){return nullptr;}
 
     BoundOperatorType BindBinaryOperator(hsql::OperatorType op);
-    BoundExpression* BindOperator(const hsql::Expr* expression);
+    //BoundExpression* BindOperator(const hsql::Expr* expression);
     //select statement bind sub-functions
     void BindFrom( const hsql::SelectStatement* statement, BoundSelectStatement& bound);
 
     BoundJoinClause BindJoin(const hsql::JoinDefinition* join);
     JoinType BindJoinType(hsql::JoinType type);
 
+
+    
 };
 
 

@@ -1,14 +1,16 @@
 #include"binder.h"
+#include<iostream>
+#include "assert.h"
 
-std::unique_ptr<BoundStatement> Binder::bind(const hsql::SQLStatement* statement) {
-
+unique_ptr<BoundStatement> Binder::bind(const hsql::SQLStatement* statement) {
+    
+    cout<<"stmt type : " <<statement->type()<<endl;
     switch (statement->type()) {
-
         case hsql::kStmtSelect:{
 
             auto* select_statement = static_cast<const hsql::SelectStatement*>(statement);
 
-            return make_unique<BoundSelectStatement>(BindSelect(select_statement));
+            return unique_ptr<BoundStatement>(BindSelect(select_statement));
         }
         /*
         case hsql::kStmtInsert:
@@ -59,7 +61,7 @@ std::unique_ptr<BoundStatement> Binder::bind(const hsql::SQLStatement* statement
 */
 
 BoundSelectStatement* Binder::BindSelect(const hsql::SelectStatement* statement){
-    
+
     //check if null statement
     if(statement ==nullptr)
         throw runtime_error("cannot bind null SELECT statement");
@@ -73,8 +75,11 @@ BoundSelectStatement* Binder::BindSelect(const hsql::SelectStatement* statement)
     BindFrom(statement, *bound);
 
     //JOIN
-    BoundJoinClause bind_join = BindJoin(statement->fromTable->join);
-    bound->joins.push_back(bind_join);
+    if(statement->fromTable->join != nullptr){
+        BoundJoinClause bind_join = BindJoin(statement->fromTable->join);
+        bound->joins.push_back(bind_join);
+    }
+
 
     //select list :
 
@@ -84,7 +89,7 @@ BoundSelectStatement* Binder::BindSelect(const hsql::SelectStatement* statement)
         //resolve the expression binder
         item.expression = BindExpression(expr);
         
-        item.alias = expr->alias;
+        item.alias = expr->alias?expr->alias :"";
         bound->select_list.push_back(item);
     }
 
@@ -100,17 +105,17 @@ BoundSelectStatement* Binder::BindSelect(const hsql::SelectStatement* statement)
         }
     }
     //HAVING
-    if(statement->groupBy->having != nullptr){
+    if(statement->groupBy && statement->groupBy->having != nullptr){
         bound->having = BindExpression(statement->groupBy->having);
     }
 
     // ORDER BY
-    BindOrderBy(statement);
+    //BindOrderBy(statement);
 
     // LIMIT adn OFSSET
-    BindLimitOffset(statement);
+    //BindLimitOffset(statement);
 
-    
+    bound->PrintTree();
     return bound;
 }
 
@@ -120,7 +125,7 @@ BoundExpression* Binder::BindExpression(hsql::Expr* expression){
         return nullptr;
     }
     switch (expression->type) {
-
+        cout<<"expr type : "<<expression->type<<endl;
         case hsql::kExprColumnRef:
             return BindColumnRef(expression);
 
@@ -160,12 +165,15 @@ BoundExpression* Binder::BindColumnRef(const hsql::Expr* expression){
 
     //extract column name from parser AST
     string column_name = expression->getName();
+    cout<< "col name : "<< column_name<<endl;
 
     if (column_name.empty()) {
         throw runtime_error("column name is empty");
     }
     //get table_name
-    string table_name = expression->table;
+    string table_name = expression->table? expression->table : "NULL";
+    cout<< "table name : "<< table_name<<endl;
+
     //resolve col_ref from the context of the binder
     BoundColumnRef* col_ref;
     col_ref = context->ResolveColumn(table_name, column_name);
@@ -380,8 +388,56 @@ BoundJoinClause Binder::BindJoin(const hsql::JoinDefinition* join){
 }
 
 
-
 int
 main(){
+
+    DiskManager* dm = new DiskManager("catalog.db");
+    BufferPoolManager* BPM = new BufferPoolManager(dm);
+
+    Catalog* catalog = new Catalog(BPM, true);
+
+    string table_name = "User";
+
+    Column t1_col1 = Column(TYPE_INT, "user_id", sizeof(int));
+    Column t1_col2 = Column(TYPE_STRING, "firstName", 30);
+    Column t1_col3 = Column(TYPE_STRING, "lastName", 30);
+    Column t1_col4 = Column(TYPE_INT, "age", sizeof(int));
+    vector<Column> user_schema = {t1_col1, t1_col2, t1_col3, t1_col4};
+
+    catalog->CreateTable(table_name, user_schema);
+
+    cout<<endl;
+    for(auto&[table_name, table_info]: catalog->getTables()){
+        cout<<table_name<<endl;
+        cout<<table_info->table_name<<endl;
+        for(auto&col: table_info->schema){
+            col.printCol();
+        }
+        cout<<endl;
+    }
+    cout<<"--------------"<<endl;
+
+    //catalog->save_catalog();
+
+    const std::string sql = "SELECT User.user_id FROM User;";
+
+    hsql::SQLParserResult result;
+
+    hsql::SQLParser::parse(sql, &result);
+
+    BindContext* context = new BindContext();
+    Binder* binder = new Binder(catalog, context);
+
+    const hsql::SQLStatement* stmt = result.getStatement(0);
+    binder->bind(stmt);
+
+    cout<<context->tables.size()<<endl;
+
+    for(auto&table:context->tables){
+        table.printTable();
+    }
+
+    
+
 
 }
