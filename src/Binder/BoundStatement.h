@@ -19,11 +19,13 @@ enum class BoundStatementType {
 
 class BoundStatement {
 public:
-
     virtual ~BoundStatement() = default;
 
     virtual BoundStatementType
     type() const = 0;
+    // just printing
+    //virtual void PrintTree(const string& prefix = "",
+                           //bool isLast = true) const = 0;
 };
 
 #endif
