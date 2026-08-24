@@ -12,13 +12,7 @@
 using namespace std;
 
 
-struct BoundExpression {
-    FieldType return_type;
-    ExpressionType exp_type;
-    virtual ~BoundExpression() = default;
-};
-
-enum class ExpressionType {
+enum class BoundExpressionType {
     COLUMN_REF,
     CONSTANT,
     BINARY,
@@ -26,6 +20,22 @@ enum class ExpressionType {
     FUNCTION,
     STAR
 };
+
+class BoundExpression {
+public:
+    FieldType return_type;
+    BoundExpressionType exp_type;
+    //virtual ~BoundExpression() = default;
+    //just printing
+    virtual void PrintTree(const string& prefix = "",
+                           bool isLast = true) const {
+        cout << prefix
+             << (isLast ? "└── " : "├── ")
+             << "BoundExpression\n";
+    }
+};
+
+
 
 // i want to represent the bounded col like this :
 // ColRef("age") : 
@@ -50,6 +60,31 @@ public:
 
         this->return_type = return_type;
     }
+
+    // just printing
+    void PrintTree(const string& prefix,
+                               bool isLast) const override{
+    cout << prefix
+         << (isLast ? "└── " : "├── ")
+         << "BoundColumnRef\n";
+
+    string childPrefix = prefix + (isLast ? "    " : "│   ");
+
+    cout << childPrefix << "├── table: "
+         << table_name << '\n';
+
+    cout << childPrefix << "├── column: "
+         << column_name << '\n';
+
+    cout << childPrefix << "├── table_oid: "
+         << table_oid << '\n';
+
+    cout << childPrefix << "├── column_oid: "
+         << column_oid << '\n';
+
+    cout << childPrefix << "└── type: "
+         << return_type << '\n';
+    }
 };
 
 /*
@@ -60,11 +95,28 @@ BoundTable
 */
 class BoundTable{
     public:
-    int table_oid;
+        int table_oid;
 
-    string table_name;
-    string alias;
-    vector<Column> schema;
+        string table_name;
+        string alias;
+        vector<Column> schema;
+    /*
+    void printTable(){
+        cout<<"table oid : "<<table_oid;
+    }*/
+    // a better printing
+    void printTable() const {
+        std::cout << "Table: " << table_name;
+        if (!alias.empty()) {
+            std::cout << " AS " << alias;
+        }
+        std::cout << " (OID: " << table_oid << ")\n";
+        
+        std::cout << "Schema:\n";
+        for(Column col:schema){
+            col.printCol();
+        }
+    }
 };
 
 
@@ -86,29 +138,68 @@ class BoundConstantExpression : public BoundExpression {
     BoundConstantExpression(const int int_value){
         return_type = TYPE_INT;
         value.int_const = int_value;
-        exp_type = ExpressionType::CONSTANT;
+        exp_type = BoundExpressionType::CONSTANT;
     }
 
     BoundConstantExpression(const double float_value){
         return_type = TYPE_FLOAT;
         value.float_const = float_value;
-        exp_type = ExpressionType::CONSTANT;
+        exp_type = BoundExpressionType::CONSTANT;
     }
 
     BoundConstantExpression(const bool bool_value){
         return_type = TYPE_BOOL;
         value.bool_const = bool_value;
-        exp_type = ExpressionType::CONSTANT;
+        exp_type = BoundExpressionType::CONSTANT;
     }
 
     BoundConstantExpression(const string& str_value) {
         return_type = TYPE_STRING;
         new (&value.str_const)string(str_value);
-        exp_type = ExpressionType::CONSTANT;
+        exp_type = BoundExpressionType::CONSTANT;
+    }
+
+    //just printing
+    void PrintTree(const string& prefix = "",
+                   bool isLast = true) const override {
+
+        cout << prefix
+             << (isLast ? "└── " : "├── ")
+             << "BoundConstant\n";
+
+        string childPrefix =
+            prefix + (isLast ? "    " : "│   ");
+
+        switch (return_type) {
+
+            case FieldType::TYPE_INT:
+                cout << childPrefix
+                     << "└── value: "
+                     << value.int_const << '\n';
+                break;
+
+            case FieldType::TYPE_FLOAT:
+                cout << childPrefix
+                     << "└── value: "
+                     << value.float_const << '\n';
+                break;
+
+            case FieldType::TYPE_BOOL:
+                cout << childPrefix
+                     << "└── value: "
+                     << (value.bool_const ? "true" : "false") << '\n';
+                break;
+
+            case FieldType::TYPE_STRING:
+                cout << childPrefix
+                     << "└── value: "
+                     << value.str_const << '\n';
+                break;
+        }
     }
 
 };
-
+/*
 enum class BinaryOperator{
     EQ,
     NE, 
@@ -116,7 +207,7 @@ enum class BinaryOperator{
     GE, 
     LT, 
     LE 
-};
+};*/
 enum class BoundOperatorType {
     EQ,
     NE,
@@ -133,6 +224,26 @@ enum class BoundOperatorType {
 };
 
 
+
+static string OperatorToString(BoundOperatorType op) {
+    switch (op) {
+        case BoundOperatorType::EQ:  return "=";
+        case BoundOperatorType::NE:  return "!=";
+        case BoundOperatorType::GT:  return ">";
+        case BoundOperatorType::GE:  return ">=";
+        case BoundOperatorType::LT:  return "<";
+        case BoundOperatorType::LE:  return "<=";
+        case BoundOperatorType::AND: return "AND";
+        case BoundOperatorType::OR:  return "OR";
+        case BoundOperatorType::ADD: return "+";
+        case BoundOperatorType::SUB: return "-";
+        case BoundOperatorType::MUL: return "*";
+        case BoundOperatorType::DIV: return "/";
+    }
+
+    return "?";
+}
+
 class BoundBinaryExpression : public BoundExpression{
 
 public:
@@ -144,10 +255,36 @@ public:
 
     BoundBinaryExpression(BoundExpression* left, BoundOperatorType op,BoundExpression* right, FieldType return_type)
                         :left(left), right(right),op(op){
-        exp_type = ExpressionType::BINARY;
+        exp_type = BoundExpressionType::BINARY;
         this->return_type = return_type;
     }
 
+    void PrintTree(const string& prefix = "",
+                   bool isLast = true) const override {
+
+        cout << prefix
+             << (isLast ? "└── " : "├── ")
+             << "BoundBinaryExpression\n";
+
+        string childPrefix =
+            prefix + (isLast ? "    " : "│   ");
+
+        cout << childPrefix
+             << "├── operator: "
+             << OperatorToString(op) << '\n';
+
+        cout << childPrefix << "|--- left\n";
+
+        if (left) {
+            left->PrintTree(childPrefix + "│   ", true);
+        }
+
+        cout << childPrefix << "└── right\n";
+
+        if (right) {
+            right->PrintTree(childPrefix + "    ", true);
+        }
+    }
 };
 
 #endif
