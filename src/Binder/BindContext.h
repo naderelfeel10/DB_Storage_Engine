@@ -15,7 +15,6 @@ public:
     void AddTable(const BoundTable& table);
     BoundColumnRef* ResolveColumn(const string& table_name, const string& column_name);
 
-    private:
     vector<BoundTable> tables;
 };
 

@@ -4,6 +4,8 @@ using namespace std;
 
 BoundColumnRef* BindContext::ResolveColumn(const string& table_name, const string& column_name){ 
     
+    cout<<"ll : ";
+    cout<<table_name<<" "<<column_name<<endl;
     // using table_name, and col_name 
     // find the actual ColRef and return it, else return not found or repeated col
     BoundColumnRef* result;
@@ -38,12 +40,15 @@ BoundColumnRef* BindContext::ResolveColumn(const string& table_name, const strin
         }
 
         // construct the rsult
-        result->table_oid = table.table_oid;
-        result->column_oid = col_id;
+        // result->table_oid = table.table_oid;
+        // result->column_oid = col_id;
 
-        result->table_name = table.alias.empty()? table.table_name : table.alias;
-        result->column_name = column_name;
-        result->return_type = col_type;
+        // result->table_name = table.alias.empty()? table.table_name : table.alias;
+        // result->column_name = column_name;
+        // result->return_type = col_type;
+
+        BoundColumnRef* result = new BoundColumnRef(table.table_oid, col_id, table_name, column_name, col_type);
+        cout<<result->table_name<<", "<<result->table_oid<<", "<<result->column_name<<", "<<result->return_type<<endl;
 
         found = true;
     }
@@ -55,8 +60,11 @@ BoundColumnRef* BindContext::ResolveColumn(const string& table_name, const strin
     return result;
 }
 
+void BindContext::AddTable(const BoundTable& table){
+    tables.push_back(table);
+}
 
-int
+/*int
 main(){
 
-}
+}*/
