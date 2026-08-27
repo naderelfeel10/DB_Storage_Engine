@@ -8,7 +8,7 @@ BoundColumnRef* BindContext::ResolveColumn(const string& table_name, const strin
     cout<<table_name<<" "<<column_name<<endl;
     // using table_name, and col_name 
     // find the actual ColRef and return it, else return not found or repeated col
-    BoundColumnRef* result;
+    BoundColumnRef* result = nullptr;
     bool found = false;
 
     for(const auto& table : tables){
@@ -27,7 +27,7 @@ BoundColumnRef* BindContext::ResolveColumn(const string& table_name, const strin
             if(col.getColName() == column_name){
                 col_found=true;
                 col_type = col.getColType();
-                continue;
+                break;
             }
             col_id++;
         }
@@ -43,19 +43,20 @@ BoundColumnRef* BindContext::ResolveColumn(const string& table_name, const strin
         // result->table_oid = table.table_oid;
         // result->column_oid = col_id;
 
-        // result->table_name = table.alias.empty()? table.table_name : table.alias;
+        string resolved_table_name = table.alias.empty()? table.table_name : table.alias;
         // result->column_name = column_name;
         // result->return_type = col_type;
 
-        BoundColumnRef* result = new BoundColumnRef(table.table_oid, col_id, table_name, column_name, col_type);
+        result = new BoundColumnRef(table.table_oid, col_id, resolved_table_name, column_name, col_type);
         cout<<result->table_name<<", "<<result->table_oid<<", "<<result->column_name<<", "<<result->return_type<<endl;
 
         found = true;
     }
 
     if(!found){
-        cerr<<"Column does not exist: " + column_name<<endl;
+        cerr<<"column does not exist: " + column_name<<endl;
     }
+    result->PrintTree("|",true);
 
     return result;
 }
