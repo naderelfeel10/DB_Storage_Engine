@@ -30,7 +30,7 @@ public:
     virtual void PrintTree(const string& prefix = "",
                            bool isLast = true) const {
         cout << prefix
-             << (isLast ? "└── " : "├── ")
+             << (isLast ? "|-- " : "|-- ")
              << "BoundExpression\n";
     }
 };
@@ -65,24 +65,24 @@ public:
     void PrintTree(const string& prefix,
                                bool isLast) const override{
     cout << prefix
-         << (isLast ? "└── " : "├── ")
+         << (isLast ? "|-- " : "|-- ")
          << "BoundColumnRef\n";
 
-    string childPrefix = prefix + (isLast ? "    " : "│   ");
+    string childPrefix = prefix + (isLast ? "    " : "|   ");
 
-    cout << childPrefix << "├── table: "
+    cout << childPrefix << "|-- table: "
          << table_name << '\n';
 
-    cout << childPrefix << "├── column: "
+    cout << childPrefix << "|-- column: "
          << column_name << '\n';
 
-    cout << childPrefix << "├── table_oid: "
+    cout << childPrefix << "|-- table_oid: "
          << table_oid << '\n';
 
-    cout << childPrefix << "├── column_oid: "
+    cout << childPrefix << "|-- column_oid: "
          << column_oid << '\n';
 
-    cout << childPrefix << "└── type: "
+    cout << childPrefix << "|-- type: "
          << return_type << '\n';
     }
 };
@@ -122,20 +122,21 @@ class BoundTable{
 
 class BoundConstantExpression : public BoundExpression {
 
+public:
     // union of possible values the const might have:
     // int, double, cool, string
     union Value{
-        int int_const;
+        int64_t int_const;
         double float_const;
         bool bool_const;
         string str_const;
 
-        Value();
-        ~Value();
+        Value(){};
+        ~Value(){};
     }value;
 
 
-    BoundConstantExpression(const int int_value){
+    BoundConstantExpression(const int64_t int_value){
         return_type = TYPE_INT;
         value.int_const = int_value;
         exp_type = BoundExpressionType::CONSTANT;
@@ -160,44 +161,7 @@ class BoundConstantExpression : public BoundExpression {
     }
 
     //just printing
-    void PrintTree(const string& prefix = "",
-                   bool isLast = true) const override {
-
-        cout << prefix
-             << (isLast ? "└── " : "├── ")
-             << "BoundConstant\n";
-
-        string childPrefix =
-            prefix + (isLast ? "    " : "│   ");
-
-        switch (return_type) {
-
-            case FieldType::TYPE_INT:
-                cout << childPrefix
-                     << "└── value: "
-                     << value.int_const << '\n';
-                break;
-
-            case FieldType::TYPE_FLOAT:
-                cout << childPrefix
-                     << "└── value: "
-                     << value.float_const << '\n';
-                break;
-
-            case FieldType::TYPE_BOOL:
-                cout << childPrefix
-                     << "└── value: "
-                     << (value.bool_const ? "true" : "false") << '\n';
-                break;
-
-            case FieldType::TYPE_STRING:
-                cout << childPrefix
-                     << "└── value: "
-                     << value.str_const << '\n';
-                break;
-        }
-    }
-
+    void PrintTree(const string& prefix="", bool isLast=true) const override;
 };
 /*
 enum class BinaryOperator{
@@ -263,27 +227,42 @@ public:
                    bool isLast = true) const override {
 
         cout << prefix
-             << (isLast ? "└── " : "├── ")
+             << (isLast ? "|-- " : "|-- ")
              << "BoundBinaryExpression\n";
 
+
         string childPrefix =
-            prefix + (isLast ? "    " : "│   ");
+            prefix + (isLast ? "    " : "|   ");
 
         cout << childPrefix
-             << "├── operator: "
+             << "|-- operator: "
              << OperatorToString(op) << '\n';
 
-        cout << childPrefix << "|--- left\n";
+        cout << childPrefix
+             << "|-- left: ";
+
+        if (left)
+            cout << "NOT NULL\n";
+        else
+            cout << "NULL\n";
 
         if (left) {
-            left->PrintTree(childPrefix + "│   ", true);
+            left->PrintTree(childPrefix + "|   ", true);
         }
 
-        cout << childPrefix << "└── right\n";
+        cout << childPrefix
+             << "`-- right: ";
+
+        if (right)
+            cout << "NOT NULL\n";
+        else
+            cout << "NULL\n";
 
         if (right) {
             right->PrintTree(childPrefix + "    ", true);
         }
+
+        
     }
 };
 
