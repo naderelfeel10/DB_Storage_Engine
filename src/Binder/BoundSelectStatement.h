@@ -29,9 +29,9 @@ class BoundJoinClause{
         BoundTable right_table;
         BoundExpression* condition;
         
-        BoundJoinClause(JoinType type, BoundTable right_table, BoundExpression*condition){
+        BoundJoinClause(JoinType type, BoundTable& right_table, BoundExpression*condition){
             this->type = type;
-            this->right_table;
+            this->right_table=right_table;
             this->condition = condition;
         }
 };
@@ -100,24 +100,25 @@ class BoundSelectStatement : public BoundStatement {
     }
 
     //just printing   
-    void PrintTree() const {
+    void PrintTree() const override {
         cout << "BoundSelectStatement\n";
 
         // FROM
         cout << "|-- FROM\n";
         from_table.printTable();
+        cout<<'\n';
 
         // JOINS
         if (!joins.empty()) {
-            cout << "├── JOINS\n";
+            cout << "|-- JOINS\n";
 
             for (size_t i = 0; i < joins.size(); i++) {
 
-                cout << "│   "
-                     << (i == joins.size() - 1 ? "└── " : "├── ")
+                cout << "|   "
+                     << (i == joins.size() - 1 ? "|-- " : "|-- ")
                      << "JOIN\n";
 
-                cout << "│       Type: ";
+                cout << "|       Type: ";
 
                 switch (joins[i].type) {
                     case JoinType::INNER:
@@ -135,22 +136,22 @@ class BoundSelectStatement : public BoundStatement {
 
                 cout << '\n';
 
-                cout << "│       Table:\n";
+                cout << "|       Table:\n";
                 joins[i].right_table.printTable();
-
+                cout<<"\n";
                 if (joins[i].condition) {
-                    cout << "│       Condition:\n";
-                    joins[i].condition->PrintTree("│           ", true);
+                    cout << "|       Condition:\n";
+                    joins[i].condition->PrintTree("|           ", true);
                 }
             }
         }
 
         // SELECT
-        cout << "├── SELECT\n";
+        cout << "|-- SELECT\n";
 
         for (size_t i = 0; i < select_list.size(); i++) {
 
-            cout << "│   "
+            cout << "|   "
                  << (i == select_list.size() - 1 ? "|-- " : "|-- ")
                  << "Expression";
 
@@ -162,7 +163,7 @@ class BoundSelectStatement : public BoundStatement {
 
             if (select_list[i].expression) {
                 select_list[i].expression->PrintTree(
-                    "│       ",
+                    "|       ",
                     true
                 );
             }
@@ -171,7 +172,7 @@ class BoundSelectStatement : public BoundStatement {
         // WHERE
         if (where) {
             cout << "|-- WHERE\n";
-            where->PrintTree("│   ", true);
+            where->PrintTree("|   ", true);
         }
 
         // GROUP BY
@@ -180,7 +181,7 @@ class BoundSelectStatement : public BoundStatement {
 
             for (size_t i = 0; i < group_by.size(); i++) {
                 group_by[i]->PrintTree(
-                    "│   ",
+                    "|   ",
                     i == group_by.size() - 1
                 );
             }
@@ -189,7 +190,7 @@ class BoundSelectStatement : public BoundStatement {
         // HAVING
         if (having) {
             cout << "|-- HAVING\n";
-            having->PrintTree("│   ", true);
+            having->PrintTree("|   ", true);
         }
 
         // ORDER BY
@@ -198,8 +199,8 @@ class BoundSelectStatement : public BoundStatement {
 
             for (size_t i = 0; i < order_by.size(); i++) {
 
-                cout << "│   "
-                     << (i == order_by.size() - 1 ? "└── " : "├── ");
+                cout << "|   "
+                     << (i == order_by.size() - 1 ? "|-- " : "|-- ");
 
                 cout << (order_by[i].order_type == OrderType::ASC
                              ? "ASC"
@@ -208,7 +209,7 @@ class BoundSelectStatement : public BoundStatement {
 
                 if (order_by[i].expression) {
                     order_by[i].expression->PrintTree(
-                        "│       ",
+                        "|       ",
                         true
                     );
                 }
@@ -217,13 +218,13 @@ class BoundSelectStatement : public BoundStatement {
 
         // LIMIT
         if (limit) {
-            cout << "├── LIMIT\n";
-            limit->PrintTree("│   ", true);
+            cout << "|-- LIMIT\n";
+            limit->PrintTree("|   ", true);
         }
 
         // OFFSET
         if (offset) {
-            cout << "└── OFFSET\n";
+            cout << "|-- OFFSET\n";
             offset->PrintTree("    ", true);
         }
     }
