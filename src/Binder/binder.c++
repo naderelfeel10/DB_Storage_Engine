@@ -113,7 +113,7 @@ BoundSelectStatement* Binder::BindSelect(const hsql::SelectStatement* statement)
     BindOrderBy(statement, *bound);
 
     // LIMIT adn OFSSET
-    //BindLimitOffset(statement);
+    BindLimitOffset(statement, *bound);
 
     bound->PrintTree();
     return bound;
@@ -507,6 +507,26 @@ void Binder::BindOrderBy(const hsql::SelectStatement* statement, BoundSelectStat
 }
 
 
+//limit adn offset binder
+void Binder::BindLimitOffset(const hsql::SelectStatement* statement, BoundSelectStatement& bound){
+    //check if null 
+    if(statement->limit == nullptr){
+        return;
+    }
+
+    // stmt.limit is LimitDescription and it has limit expression 
+    //so if not null, just bind it as expression
+    if(statement->limit->limit != nullptr){
+        bound.limit =BindExpression(statement->limit->limit);
+    }
+
+    // now offset, and it's also an Expr, so just bind
+    if(statement->limit->offset != nullptr){
+
+        bound.offset =BindExpression(statement->limit->offset);
+    }
+}
+
 int
 main(){
 
@@ -548,7 +568,7 @@ main(){
 
     const std::string sql = "SELECT u.user_id, u.firstName from User as u "
                             "inner join Orders on u.user_id = Orders.user_id "
-                            "WHERE u.user_id = 2 order by u.user_id;";
+                            "WHERE u.user_id = 2 order by u.user_id limit 10 offset 5;";
 
     hsql::SQLParserResult result;
 

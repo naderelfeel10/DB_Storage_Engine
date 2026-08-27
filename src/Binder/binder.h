@@ -51,8 +51,7 @@ public:
     BoundTable BindTable(const hsql::TableRef* table);
 
     void BindOrderBy(const hsql::SelectStatement* statement, BoundSelectStatement& bound);
-
-    
+    void BindLimitOffset(const hsql::SelectStatement* statement, BoundSelectStatement& bound);
 };
 
 
