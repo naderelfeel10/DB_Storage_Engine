@@ -110,10 +110,10 @@ BoundSelectStatement* Binder::BindSelect(const hsql::SelectStatement* statement)
     }
 
     // ORDER BY
-    //BindOrderBy(statement);
+    BindOrderBy(statement);
 
     // LIMIT adn OFSSET
-    //BindLimitOffset(statement);
+    BindLimitOffset(statement);
 
     bound->PrintTree();
     return bound;
@@ -124,8 +124,8 @@ BoundExpression* Binder::BindExpression(hsql::Expr* expression){
     if (expression == nullptr) {
         return nullptr;
     }
+    cout<<"expr type : "<<expression->type<<endl;
     switch (expression->type) {
-        cout<<"expr type : "<<expression->type<<endl;
         case hsql::kExprColumnRef:
             return BindColumnRef(expression);
 
@@ -178,8 +178,40 @@ BoundExpression* Binder::BindColumnRef(const hsql::Expr* expression){
     BoundColumnRef* col_ref;
     col_ref = context->ResolveColumn(table_name, column_name);
 
+    col_ref->PrintTree("|", true);
+
     return col_ref;
 
+}
+//bind constants integer, float, and strings
+//find integer 
+BoundExpression* Binder::BindIntegerLiteral(hsql::Expr* expression) {
+    if(expression == nullptr){
+        return nullptr;
+    }
+    //if not null, then fetch ival from the expression
+    cout<<expression->ival<<endl;
+    return new BoundConstantExpression(expression->ival);
+}
+
+BoundExpression* Binder::BindFloatLiteral(hsql::Expr* expression) {
+    if(expression == nullptr){
+        return nullptr;
+    }
+    cout<<expression->fval<<endl;
+    return new BoundConstantExpression(expression->fval);
+}
+
+BoundExpression* Binder::BindStringLiteral(hsql::Expr* expression){
+    //check if null first 
+    if(expression == nullptr)return nullptr;
+    
+    if(expression->name == nullptr)return nullptr;
+    
+    string name = string(expression->name);
+    cout<<name<<endl;
+
+    return new BoundConstantExpression(name);
 }
 
 // a helper function to convert from ast operator to my defined operators
@@ -269,6 +301,14 @@ BoundExpression* Binder::BindOperator(const hsql::Expr* expression){
             throw runtime_error(" unsupported operator");
     }
 
+    if(left){
+        cout<<"left is not null"<<endl;
+    }
+
+    if(right){
+        cout<<"right is not null"<<endl;
+    }
+
     return new BoundBinaryExpression(left, op, right, return_type);
 }
 
@@ -281,19 +321,60 @@ void Binder::BindFrom( const hsql::SelectStatement* statement, BoundSelectStatem
         throw runtime_error("select statement has no FROM table");
     }
     //fetch the table to extract info
-    const hsql::TableRef* table=statement->fromTable;
+    const hsql::TableRef* table =
+        statement->fromTable;
 
-    //check it's a table first
-    if (table->type != hsql::kTableName) {
-        throw std::runtime_error("unsupported \"from\" table type");
+    //2 types of binding the form:
+    //1. normal select and the type would be kTableName
+    // example : FROM User u
+    if(table->type == hsql::kTableName){
+        //bind as a single table
+        bound.from_table = BindTable(table);
+        context->AddTable(bound.from_table);
+        return;
     }
+
+    //if it's a join type, so it would contain multiple tables:
+    // example :FROM User u INNER JOIN Orders o 
+    if (table->type == hsql::kTableJoin) {
+
+        //extract the base table
+        const hsql::TableRef* left = table->join->left;
+        //this would result to the base normal case of single table
+        if (left->type != hsql::kTableName) {
+            throw runtime_error("unsupported left side of join");
+        }
+        //now bind it
+        bound.from_table = BindTable(left);
+        context->AddTable(bound.from_table);
+
+        return;
+    }
+
+    throw runtime_error("unsupported FROM table type");
+
+}
+
+// a helper function to table single table
+BoundTable Binder::BindTable(const hsql::TableRef* table){
+
+    //check uf null
+    if(table == nullptr){
+        throw runtime_error("null table");
+    }
+    //it must be KTableName type, not join or cross product
+    if(table->type != hsql::kTableName){
+        throw runtime_error("expected table name");
+    }
+
     //extract table name
+
     // then fetch from catalog
     string table_name = table->name;
 
     string alias;
-    //if it has an alian name=
-    if (table->alias != nullptr) {
+
+    if(table->alias != nullptr) {
         alias = table->alias->name;
     }
 
@@ -302,22 +383,20 @@ void Binder::BindFrom( const hsql::SelectStatement* statement, BoundSelectStatem
 
     // check if table name exists in the catalog
     if(!table_info){
-        throw runtime_error(" table does not exist: " +table_name);
+        throw runtime_error("table does not exist: " +table_name);
     }
-    // now bound the table 
-    BoundTable bound_table;
 
-    bound_table.table_oid = table_info->table_id;
-    bound_table.table_name = table_name;
-    bound_table.alias = alias;
-    bound_table.schema = table_info->schema;
+    //constuct the result
+    BoundTable result;
 
-    bound.from_table = bound_table;
+    result.table_oid = table_info->table_id;
+    result.table_name = table_name;
+    result.alias = alias;
+    result.schema = table_info->schema;
 
-    // last thing to add the table to the context
-    context->AddTable(bound_table);
+    result.printTable();
+    return result;
 }
-
 
 
 // join :
@@ -347,8 +426,9 @@ BoundJoinClause Binder::BindJoin(const hsql::JoinDefinition* join){
     //join has left, right, condition, and join type
     // first get right table
 
-    string alias = join->right->alias->name;
+    string alias = join->right->alias?join->right->alias->name:"";
     string table_name = join->right->name;
+    cout<<"right table name : "<<table_name<<endl;
     // now extract the table from the catalog, 
     TableInfo* table_info = catalog->GetTable(table_name);
 
@@ -363,11 +443,11 @@ BoundJoinClause Binder::BindJoin(const hsql::JoinDefinition* join){
     bound_table.table_name = table_name;
     bound_table.alias = alias;
     bound_table.schema = table_info->schema;
-
+    
+    bound_table.printTable();
 
     // last thing to add the table to the context
     context->AddTable(bound_table);
-
 
     BoundExpression* condition = nullptr;
     // extract on operator
@@ -383,9 +463,12 @@ BoundJoinClause Binder::BindJoin(const hsql::JoinDefinition* join){
     JoinType type =BindJoinType(join->type);
 
     BoundJoinClause result(type, bound_table, condition);
-
+    cout<<"join bound table : "<<bound_table.table_name<<endl;
+    
+    
     return result;
 }
+
 
 
 int
@@ -404,7 +487,15 @@ main(){
     Column t1_col4 = Column(TYPE_INT, "age", sizeof(int));
     vector<Column> user_schema = {t1_col1, t1_col2, t1_col3, t1_col4};
 
+    Column t3_col1 = Column(TYPE_INT, "order_id", sizeof(int));
+    Column t3_col2 = Column(TYPE_INT, "user_id", sizeof(int));
+    Column t3_col3 = Column(TYPE_FLOAT, "totalAmount", sizeof(float));
+    Column t3_col4 = Column(TYPE_BOOL, "isShipped", sizeof(bool));
+    vector<Column> order_schema = {t3_col1, t3_col2, t3_col3, t3_col4};
+
+
     catalog->CreateTable(table_name, user_schema);
+    catalog->CreateTable("Orders", order_schema);
 
     cout<<endl;
     for(auto&[table_name, table_info]: catalog->getTables()){
@@ -419,7 +510,9 @@ main(){
 
     //catalog->save_catalog();
 
-    const std::string sql = "SELECT User.user_id FROM User;";
+    const std::string sql = "SELECT u.user_id, u.firstName from User as u "
+                            "inner join Orders on u.user_id = Orders.user_id"
+                            "WHERE u.user_id = 2;";
 
     hsql::SQLParserResult result;
 
@@ -429,13 +522,17 @@ main(){
     Binder* binder = new Binder(catalog, context);
 
     const hsql::SQLStatement* stmt = result.getStatement(0);
-    binder->bind(stmt);
+    unique_ptr<BoundStatement> bound_stmt =  binder->bind(stmt);
 
     cout<<context->tables.size()<<endl;
 
     for(auto&table:context->tables){
         table.printTable();
     }
+
+    cout<<endl<<"================================================================================================="<<endl;
+    bound_stmt->PrintTree();
+
 
     
 

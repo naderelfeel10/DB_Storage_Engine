@@ -34,9 +34,9 @@ public:
     //expression types thaat i need to bind
     BoundExpression* BindColumnRef(const hsql::Expr* expression);
 
-    BoundExpression* BindIntegerLiteral(hsql::Expr* expression){return nullptr;}
-    BoundExpression* BindFloatLiteral(hsql::Expr* expression){return nullptr;}
-    BoundExpression* BindStringLiteral(hsql::Expr* expression){return nullptr;}
+    BoundExpression* BindIntegerLiteral(hsql::Expr* expression);
+    BoundExpression* BindFloatLiteral(hsql::Expr* expression);
+    BoundExpression* BindStringLiteral(hsql::Expr* expression);
     BoundExpression* BindOperator(const hsql::Expr* expression);
     BoundExpression* BindFunction(hsql::Expr* expression){return nullptr;}
 
@@ -48,6 +48,9 @@ public:
     BoundJoinClause BindJoin(const hsql::JoinDefinition* join);
     JoinType BindJoinType(hsql::JoinType type);
 
+    BoundTable BindTable(const hsql::TableRef* table);
+
+    void BindOrderBy(const hsql::SelectStatement* statement, BoundSelectStatement& bound);
 
     
 };
