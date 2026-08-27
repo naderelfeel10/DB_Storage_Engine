@@ -110,10 +110,10 @@ BoundSelectStatement* Binder::BindSelect(const hsql::SelectStatement* statement)
     }
 
     // ORDER BY
-    BindOrderBy(statement);
+    BindOrderBy(statement, *bound);
 
     // LIMIT adn OFSSET
-    BindLimitOffset(statement);
+    //BindLimitOffset(statement);
 
     bound->PrintTree();
     return bound;
@@ -470,6 +470,42 @@ BoundJoinClause Binder::BindJoin(const hsql::JoinDefinition* join){
 }
 
 
+// order by :
+void Binder::BindOrderBy(const hsql::SelectStatement* statement, BoundSelectStatement& bound){
+
+    //first check if null
+    if(statement->order == nullptr){
+        return;
+    }
+    // order by might have multiple col like : order by age, salary
+    for(const auto& order : *statement->order){
+
+        if(order == nullptr){
+            continue;
+        }
+        //bind the expression being sorted
+        BoundExpression* expression =BindExpression(order->expr);
+        //order type ASC or DESC
+        OrderType order_type;
+
+        switch(order->type){
+            case hsql::kOrderAsc:{
+                order_type = OrderType::ASC;
+                break;
+            }
+            case hsql::kOrderDesc:{
+                order_type = OrderType::DESC;
+                break;
+            }
+            default:
+                throw runtime_error("unsupported ORDER BY type");
+        
+        }
+        //now push to the order by vector
+        bound.order_by.emplace_back(expression,order_type);
+    }
+}
+
 
 int
 main(){
@@ -511,8 +547,8 @@ main(){
     //catalog->save_catalog();
 
     const std::string sql = "SELECT u.user_id, u.firstName from User as u "
-                            "inner join Orders on u.user_id = Orders.user_id"
-                            "WHERE u.user_id = 2;";
+                            "inner join Orders on u.user_id = Orders.user_id "
+                            "WHERE u.user_id = 2 order by u.user_id;";
 
     hsql::SQLParserResult result;
 
