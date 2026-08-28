@@ -63,8 +63,13 @@ BoundColumnRef* BindContext::ResolveColumn(const string& table_name, const strin
 
 void BindContext::AddTable(const BoundTable& table){
     tables.push_back(table);
+    int table_id = table.table_oid;
+    tables_map[table_id] = table;
 }
 
+BoundTable BindContext::getBoundTable(int table_id){
+    return tables_map[table_id];
+}
 /*int
 main(){
 
