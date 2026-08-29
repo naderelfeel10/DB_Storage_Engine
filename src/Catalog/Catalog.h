@@ -31,6 +31,7 @@ struct IndexInfo
 
 struct TableInfo
 {
+public:
         int offset{0};
         
         //uint32_t table_id;
@@ -45,7 +46,10 @@ struct TableInfo
         void serializeTableInfo(char* buffer);
         void loadTableInfo(char *buffer);
         int getSize();
-
+   
+        TableHeap*get_table_heap(){
+            return this->table_heap;
+        }
 };
 
 

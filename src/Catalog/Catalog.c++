@@ -282,7 +282,7 @@ void Catalog::load_catalog(int page_id=1){
             //load table name len
             memcpy(&len, buffer + offset, sizeof(len));
             offset += sizeof(len);
-            
+
             //load table name
             table_name.assign(buffer + offset, len);
             offset += len;
@@ -348,7 +348,7 @@ void Catalog::load_catalog(int page_id=1){
 
         int TableInfo::getSize(){return offset;}
 
-
+/*
 int
 main(){
 
@@ -390,7 +390,7 @@ main(){
     dm->~DiskManager();
     
     
-   
+   */
 
     /*
     DiskManager* dm2 = new DiskManager("catalog.db");
@@ -413,4 +413,4 @@ main(){
     */
     
 
-}
+//}
