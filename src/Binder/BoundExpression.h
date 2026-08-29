@@ -12,7 +12,7 @@
 using namespace std;
 
 
-enum class BoundExpressionType {
+enum  BoundExpressionType {
     COLUMN_REF,
     CONSTANT,
     BINARY,
@@ -26,6 +26,7 @@ public:
     FieldType return_type;
     BoundExpressionType exp_type;
     //virtual ~BoundExpression() = default;
+    BoundExpression(BoundExpressionType type): exp_type(type){}
     //just printing
     virtual void PrintTree(const string& prefix = "",
                            bool isLast = true) const {
@@ -56,7 +57,7 @@ public:
     BoundColumnRef();
     //this constuctor recieves input from the parser output, then creates the BoundedCol
     BoundColumnRef(int table_oid, int column_oid, const string& table_name, const string& column_name, FieldType return_type)
-        :table_oid(table_oid), column_oid(column_oid), table_name(table_name), column_name(column_name){
+        :BoundExpression(BoundExpressionType::COLUMN_REF), table_oid(table_oid), column_oid(column_oid), table_name(table_name), column_name(column_name){
 
         this->return_type = return_type;
     }
@@ -136,25 +137,25 @@ public:
     }value;
 
 
-    BoundConstantExpression(const int64_t int_value){
+    BoundConstantExpression(const int64_t int_value):BoundExpression(BoundExpressionType::CONSTANT){
         return_type = TYPE_INT;
         value.int_const = int_value;
         exp_type = BoundExpressionType::CONSTANT;
     }
 
-    BoundConstantExpression(const double float_value){
+    BoundConstantExpression(const double float_value):BoundExpression(BoundExpressionType::CONSTANT){
         return_type = TYPE_FLOAT;
         value.float_const = float_value;
         exp_type = BoundExpressionType::CONSTANT;
     }
 
-    BoundConstantExpression(const bool bool_value){
+    BoundConstantExpression(const bool bool_value):BoundExpression(BoundExpressionType::CONSTANT){
         return_type = TYPE_BOOL;
         value.bool_const = bool_value;
         exp_type = BoundExpressionType::CONSTANT;
     }
 
-    BoundConstantExpression(const string& str_value) {
+    BoundConstantExpression(const string& str_value):BoundExpression(BoundExpressionType::CONSTANT){
         return_type = TYPE_STRING;
         new (&value.str_const)string(str_value);
         exp_type = BoundExpressionType::CONSTANT;
@@ -181,6 +182,7 @@ enum class BoundOperatorType {
     LE,
     AND,
     OR,
+    NOT,
     ADD,
     SUB,
     MUL,
@@ -218,7 +220,7 @@ public:
     BoundOperatorType op;
 
     BoundBinaryExpression(BoundExpression* left, BoundOperatorType op,BoundExpression* right, FieldType return_type)
-                        :left(left), right(right),op(op){
+                        :BoundExpression(BoundExpressionType::BINARY), left(left), right(right),op(op){
         exp_type = BoundExpressionType::BINARY;
         this->return_type = return_type;
     }
