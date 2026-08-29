@@ -40,6 +40,7 @@ bool Projection::getNext(Tuple* tuple){
     }
 
     *tuple = Tuple(res_fields);
+    //tuple->print();
     return true;
 }
 

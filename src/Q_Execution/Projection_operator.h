@@ -25,7 +25,9 @@ class Projection: public AbstractExecuter{
 
     public:
     Projection(AbstractExecuter* child_operator, vector<string> projection_cols):child_operator(child_operator),
-                                                                                 projection_cols(projection_cols){}
+                                                                                 projection_cols(projection_cols){
+        open();
+        }
 
     void open();
     void close() { this->child_operator->close(); }
