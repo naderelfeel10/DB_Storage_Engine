@@ -21,6 +21,8 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
             TableInfo* table_info = catalog->GetTable(table_name);
             TableHeap* table_heap = table_info->get_table_heap();
 
+            assert(table_heap->get_output_schema().size() > 0);
+
             //check if null
             if(table_heap == nullptr){
                 throw runtime_error("table heap not found");
@@ -192,8 +194,13 @@ Column* ExecutorFactory::expr_to_col(BoundExpression* expr,AbstractExecuter* chi
 
             BoundColumnRef* col_ref = static_cast<BoundColumnRef*>(expr);
 
+            if(child == nullptr){
+                throw runtime_error("child executer iis null");
+            }
              //fetch schema from the child
             vector<Column> schema = child->get_output_schema();
+            cout<<"schema size : "<<schema.size()<<endl;
+            cout<<"col ref : "<<col_ref->column_name<<", "<<col_ref->column_oid<<endl;
             //then select the needed col
             Column* result = new Column(schema[col_ref->column_oid]);
 
@@ -260,7 +267,39 @@ Column* ExecutorFactory::const_to_col(BoundConstantExpression* expr){
         }
 }
 
+/// dummy insertions
+void InsertIntoUserTable(TableHeap* user_table){
+    for(int i = 0; i < 70; i++){
 
+        Field u1(TYPE_INT, 100 + i);
+        Field u2(TYPE_STRING,("First_" + to_string(i)).c_str());
+        Field u3(TYPE_STRING,("Last_" + to_string(i)).c_str());
+        Field u4(TYPE_INT, 20 + i);
+
+        Tuple tuple({u1, u2, u3, u4});
+        RID rid = user_table->insertTuple(tuple);
+
+    }
+}
+
+vector<Column> CreateUserSchema(){
+    return{
+        Column(TYPE_INT, "user_id", sizeof(int)),
+        Column(TYPE_STRING, "firstName", 30),
+        Column(TYPE_STRING, "lastName", 30),
+        Column(TYPE_INT, "age", sizeof(int))
+    };
+}
+vector<Column> CreateOrdersSchema(){
+    return {
+        Column(TYPE_INT, "order_id", sizeof(int)),
+        Column(TYPE_INT, "user_id", sizeof(int)),
+        Column(TYPE_FLOAT, "totalAmount", sizeof(float)),
+        Column(TYPE_BOOL, "isShipped", sizeof(bool))
+    };
+}
+
+/*
 int
 main(){
 
@@ -269,22 +308,12 @@ main(){
 
     Catalog* catalog = new Catalog(BPM, true);
 
-    string table_name = "User";
+    vector<Column>user_schema = CreateUserSchema();
+    catalog->CreateTable("User", user_schema);
 
-    Column t1_col1 = Column(TYPE_INT, "user_id", sizeof(int));
-    Column t1_col2 = Column(TYPE_STRING, "firstName", 30);
-    Column t1_col3 = Column(TYPE_STRING, "lastName", 30);
-    Column t1_col4 = Column(TYPE_INT, "age", sizeof(int));
-    vector<Column> user_schema = {t1_col1, t1_col2, t1_col3, t1_col4};
+    TableHeap* user_table_heap = catalog->GetTable("User")->get_table_heap();
 
-    Column t3_col1 = Column(TYPE_INT, "order_id", sizeof(int));
-    Column t3_col2 = Column(TYPE_INT, "user_id", sizeof(int));
-    Column t3_col3 = Column(TYPE_FLOAT, "totalAmount", sizeof(float));
-    Column t3_col4 = Column(TYPE_BOOL, "isShipped", sizeof(bool));
-    vector<Column> order_schema = {t3_col1, t3_col2, t3_col3, t3_col4};
-
-
-    catalog->CreateTable(table_name, user_schema);
+    vector<Column>order_schema = CreateOrdersSchema();
     catalog->CreateTable("Orders", order_schema);
 
     cout<<endl;
@@ -336,7 +365,7 @@ main(){
 
     //executer factory
     ExecutorFactory factory(catalog, context);
-    AbstractExecuter* executor = factory.createExecutor(plan);
+    Projection* executor = dynamic_cast<Projection*>(factory.createExecutor(plan));
 
     //execution
     executor->open();
@@ -354,5 +383,114 @@ main(){
     cout<<"=============================\n";
     
 
+
+}
+*/
+
+//main rewrite
+int main()
+{
+    DiskManager* dm = new DiskManager("catalog.db");
+
+    BufferPoolManager* BPM = new BufferPoolManager(dm);
+
+    Catalog* catalog = new Catalog(BPM, true);
+
+    vector<Column> user_schema = CreateUserSchema();
+
+    TableInfo* user_info =catalog->CreateTable("User", user_schema);
+
+    if(user_info == nullptr){
+        cerr<<"Failed to create User table"<<endl;
+        return 0;
+    }
+
+
+    TableHeap* user_table = user_info->table_heap;
+
+    InsertIntoUserTable(user_table);
+
+
+
+    vector<Column> order_schema = CreateOrdersSchema();
+
+    TableInfo* orders_info = catalog->CreateTable("Orders", order_schema);
+
+    if(orders_info == nullptr){
+        cerr<<"Failed to create Orders table"<<endl;
+        return 0;
+    }
+
+
+    cout<<"\n==========CATALOG=========="<<endl;
+
+    for (auto& [table_name, table_info] : catalog->getTables()) {
+
+        cout<<"Table: "<<table_name << endl;
+        cout<<"OID: "<<table_info->first_page_id<<endl;
+        cout<<"Schema:\n";
+        for(auto& col : table_info->schema){
+            col.printCol();
+        }
+        cout << endl;
+    }
+
+    cout<<"=============================\n";
+
+    //const std::string sql = "SELECT u.user_id, u.firstName from User as u "
+    //                        "inner join Orders on u.user_id = Orders.user_id "
+    //                        "WHERE u.user_id = 2 order by u.user_id limit 10 offset 5;";
+                            
+
+    //const string sql = "select u.firstName from User u where u.user_id > 10;";
+    string sql;
+    cout<<"ELFEEL_DB> ";
+    getline(cin, sql);
+
+    hsql::SQLParserResult result;
+
+    hsql::SQLParser::parse(sql, &result);
+
+    BindContext* context = new BindContext();
+    Binder* binder = new Binder(catalog, context);
+
+    const hsql::SQLStatement* stmt = result.getStatement(0);
+    unique_ptr<BoundStatement> bound_stmt =  binder->bind(stmt);
+
+    cout<<context->tables.size()<<endl;
+
+    for(auto&table:context->tables){
+        table.printTable();
+    }
+
+    cout<<endl<<"================================================================================================="<<endl;
+    bound_stmt->PrintTree();
+    cout<<endl<<"================================================================================================="<<endl;
+    
+    //create the plan
+    Planner* planner = new Planner();
+    AbstractPlanNode* plan = planner->Plan(move(bound_stmt));
+    
+    //print plan tree
+    plan->PrintTree();
+
+    //executer factory
+    ExecutorFactory factory(catalog, context);
+    Projection* executor = dynamic_cast<Projection*>(factory.createExecutor(plan));
+
+    //execution
+    executor->open();
+
+    cout<<"\n==========output==========\n";
+
+    Tuple tuple({});
+
+    while(executor->getNext(&tuple)){
+        tuple.print();
+    }
+
+    executor->close();
+
+    cout<<"=============================\n";
 
 }
