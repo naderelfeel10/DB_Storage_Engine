@@ -1,4 +1,6 @@
 #include"ExecutorFactory.hpp"
+#include<iostream>
+using namespace std;
 
 //create the factory executer based on plan 
 AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
@@ -68,22 +70,20 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
             //keep calling recursevly
             AbstractExecuter* child = createExecutor(filter_plan->child);
             //then constrcut the predicate from bound 
-            AbstractPredicate* predicate =
-                ConvertPredicate(
-                    filter_plan->predicate
-                );
+            AbstractPredicate* predicate = build_predicate(filter_plan->predicate, child);
 
-            return new Select(
-                child,
-                predicate
-            );
+            return new Select(child, predicate);
+        }
+        default:{
+            throw runtime_error("invalid planType");
+            return nullptr;
         }
 
     }
 }
 
 
-AbstractPredicate* ExecutorFactory::BuildPredicate(BoundExpression* expression){
+AbstractPredicate* ExecutorFactory::build_predicate(BoundExpression* expression, AbstractExecuter* child){
     //check if null
     if(expression == nullptr){
         return nullptr;
@@ -100,21 +100,21 @@ AbstractPredicate* ExecutorFactory::BuildPredicate(BoundExpression* expression){
         //complex predicate 
         //and, or, not
         case BoundOperatorType::AND:{
-            AbstractPredicate* left_child = BuildPredicate(binary->left);
-            AbstractPredicate* right_child = BuildPredicate(binary->right);
+            AbstractPredicate* left_child = build_predicate(binary->left,child );
+            AbstractPredicate* right_child = build_predicate(binary->right,child );
 
             return new ComplexPredicate(left_child, right_child, ComplexPredicateType::AND);
         }
 
         case BoundOperatorType::OR:{
-            AbstractPredicate* left_child = BuildPredicate(binary->left);
-            AbstractPredicate* right_child = BuildPredicate(binary->right);
+            AbstractPredicate* left_child = build_predicate(binary->left, child);
+            AbstractPredicate* right_child = build_predicate(binary->right, child);
 
             return new ComplexPredicate(left_child, right_child, ComplexPredicateType::OR);
         }
 
         case BoundOperatorType::NOT:{
-            AbstractPredicate* left_child = BuildPredicate(binary->left);
+            AbstractPredicate* left_child = build_predicate(binary->left, child);
 
             return new ComplexPredicate(left_child, nullptr, ComplexPredicateType::NOT);
         }
@@ -122,45 +122,237 @@ AbstractPredicate* ExecutorFactory::BuildPredicate(BoundExpression* expression){
         //now simple predicates like user_id = 1;
 
         case BoundOperatorType::EQ:{
-            string col_name = dynamic_cast<BoundColumnRef*>(binary->left)->column_name;
+            //string col_name = dynamic_cast<BoundColumnRef*>(binary->left)->column_name;
+            Column* left_col = expr_to_col(binary->left, child);
+            Column* right_col = expr_to_col(binary->right, child);
 
-            Column* left_col = Column(); 
-            return Predicate(binary, PredicateType::EQ);
-
+            return new Predicate(left_col, right_col, PredicateType::EQ);
         }
-        case BoundOperatorType::NE:
-            return BuildSimplePredicate(
-                binary,
-                PredicateType::NE
-            );
+        case BoundOperatorType::NE:{
+            //string col_name = dynamic_cast<BoundColumnRef*>(binary->left)->column_name;
+            Column* left_col = expr_to_col(binary->left, child);
+            Column* right_col = expr_to_col(binary->right, child);
 
-        case BoundOperatorType::GT:
-            return BuildSimplePredicate(
-                binary,
-                PredicateType::GT
-            );
+            return new Predicate(left_col, right_col, PredicateType::NE);
+        }
 
-        case BoundOperatorType::GE:
-            return BuildSimplePredicate(
-                binary,
-                PredicateType::GE
-            );
+        case BoundOperatorType::GT:{
+            //string col_name = dynamic_cast<BoundColumnRef*>(binary->left)->column_name;
+            Column* left_col = expr_to_col(binary->left, child);
+            Column* right_col = expr_to_col(binary->right, child);
 
-        case BoundOperatorType::LT:
-            return BuildSimplePredicate(
-                binary,
-                PredicateType::LT
-            );
+            return new Predicate(left_col, right_col, PredicateType::GT);
+        }
 
-        case BoundOperatorType::LE:
-            return BuildSimplePredicate(
-                binary,
-                PredicateType::LE
-            );
+        case BoundOperatorType::GE:{
+            //string col_name = dynamic_cast<BoundColumnRef*>(binary->left)->column_name;
+            
+            Column* left_col = expr_to_col(binary->left, child);
+            Column* right_col = expr_to_col(binary->right, child);
+
+            return new Predicate(left_col, right_col, PredicateType::GE);
+        }
+
+        case BoundOperatorType::LT:{
+            //string col_name = dynamic_cast<BoundColumnRef*>(binary->left)->column_name;
+            Column* left_col = expr_to_col(binary->left, child);
+            Column* right_col = expr_to_col(binary->right, child);
+
+            return new Predicate(left_col, right_col, PredicateType::LT);
+        }
+
+        case BoundOperatorType::LE:{
+            //string col_name = dynamic_cast<BoundColumnRef*>(binary->left)->column_name;
+            Column* left_col = expr_to_col(binary->left, child);
+            Column* right_col = expr_to_col(binary->right, child);
+
+            return new Predicate(left_col, right_col, PredicateType::LE);
+        }
 
         default:
             throw runtime_error(
                 "Unsupported predicate operator"
             );
     }
+}
+
+
+
+
+// expression can't just be passed to select operator
+// i have to transform it from expression into col, then pass it into the operator
+Column* ExecutorFactory::expr_to_col(BoundExpression* expr,AbstractExecuter* child){
+
+    //based on expression type, choose how to handle it
+    // might be col_ref, or const
+    cout<<expr->exp_type<<endl;
+    switch(expr->exp_type){
+        //fist case if col_ref, ex: "user_id"
+        case BoundExpressionType::COLUMN_REF:{
+
+            BoundColumnRef* col_ref = static_cast<BoundColumnRef*>(expr);
+
+             //fetch schema from the child
+            vector<Column> schema = child->get_output_schema();
+            //then select the needed col
+            Column* result = new Column(schema[col_ref->column_oid]);
+
+            return result;
+        }
+
+        // case 2 is const values, like : integer or string value
+        case BoundExpressionType::CONSTANT:{
+
+            BoundConstantExpression* constant = static_cast<BoundConstantExpression*>(expr);
+            //convert this concrete value into actual col
+            Column* result = const_to_col(constant);
+
+            return result;
+        }
+
+        default:
+            throw runtime_error("invalid expression");
+    }
+}
+
+
+//wrap const values into a col
+Column* ExecutorFactory::const_to_col(BoundConstantExpression* expr){
+        
+    //convert based on return type
+    //int, bool, float or string
+    switch(expr->return_type){
+        
+        case FieldType::TYPE_INT:{
+            //construct the field containing typen and value
+            Field* f = new Field(TYPE_INT, static_cast<int>(expr->value.int_const));
+            //then col has field, name and size
+            Column* col = new Column(f,"_const_int_", sizeof(int));
+            return col;
+        }
+
+        case FieldType::TYPE_FLOAT:{
+            //construct the field containing typen and value
+            Field* f = new Field(TYPE_FLOAT, static_cast<double>(expr->value.float_const));
+            //then col has field, name and size
+            Column* col = new Column(f,"_const_float_", sizeof(double));
+            return col;
+        }
+
+        case FieldType::TYPE_BOOL:{
+            //construct the field containing typen and value
+            Field* f = new Field(TYPE_BOOL, static_cast<bool>(expr->value.bool_const));
+            //then col has field, name and size
+            Column* col = new Column(f,"_const_bool_", sizeof(bool));
+            return col;
+        }
+
+        case FieldType::TYPE_STRING:{
+            //construct the field containing typen and value
+            Field* f = new Field(TYPE_STRING, static_cast<const char*>(expr->value.str_const.c_str()));
+            //then col has field, name and size
+            Column* col = new Column(f,"_const_str_", expr->value.str_const.size());
+            return col;
+        } 
+
+        default:
+            break;
+        }
+}
+
+
+int
+main(){
+
+    DiskManager* dm = new DiskManager("catalog.db");
+    BufferPoolManager* BPM = new BufferPoolManager(dm);
+
+    Catalog* catalog = new Catalog(BPM, true);
+
+    string table_name = "User";
+
+    Column t1_col1 = Column(TYPE_INT, "user_id", sizeof(int));
+    Column t1_col2 = Column(TYPE_STRING, "firstName", 30);
+    Column t1_col3 = Column(TYPE_STRING, "lastName", 30);
+    Column t1_col4 = Column(TYPE_INT, "age", sizeof(int));
+    vector<Column> user_schema = {t1_col1, t1_col2, t1_col3, t1_col4};
+
+    Column t3_col1 = Column(TYPE_INT, "order_id", sizeof(int));
+    Column t3_col2 = Column(TYPE_INT, "user_id", sizeof(int));
+    Column t3_col3 = Column(TYPE_FLOAT, "totalAmount", sizeof(float));
+    Column t3_col4 = Column(TYPE_BOOL, "isShipped", sizeof(bool));
+    vector<Column> order_schema = {t3_col1, t3_col2, t3_col3, t3_col4};
+
+
+    catalog->CreateTable(table_name, user_schema);
+    catalog->CreateTable("Orders", order_schema);
+
+    cout<<endl;
+    for(auto&[table_name, table_info]: catalog->getTables()){
+        cout<<table_name<<endl;
+        cout<<table_info->table_name<<endl;
+        for(auto&col: table_info->schema){
+            col.printCol();
+        }
+        cout<<endl;
+    }
+    cout<<"--------------"<<endl;
+
+    //catalog->save_catalog();
+
+    //const std::string sql = "SELECT u.user_id, u.firstName from User as u "
+    //                        "inner join Orders on u.user_id = Orders.user_id "
+    //                        "WHERE u.user_id = 2 order by u.user_id limit 10 offset 5;";
+                            
+
+    const string sql = "select u.firstName from User u where u.user_id > 10;";
+
+    hsql::SQLParserResult result;
+
+    hsql::SQLParser::parse(sql, &result);
+
+    BindContext* context = new BindContext();
+    Binder* binder = new Binder(catalog, context);
+
+    const hsql::SQLStatement* stmt = result.getStatement(0);
+    unique_ptr<BoundStatement> bound_stmt =  binder->bind(stmt);
+
+    cout<<context->tables.size()<<endl;
+
+    for(auto&table:context->tables){
+        table.printTable();
+    }
+
+    cout<<endl<<"================================================================================================="<<endl;
+    bound_stmt->PrintTree();
+    cout<<endl<<"================================================================================================="<<endl;
+    
+    //create the plan
+    Planner* planner = new Planner();
+    AbstractPlanNode* plan = planner->Plan(move(bound_stmt));
+    
+    //print plan tree
+    plan->PrintTree();
+
+    //executer factory
+    ExecutorFactory factory(catalog, context);
+    AbstractExecuter* executor = factory.createExecutor(plan);
+
+    //execution
+    executor->open();
+
+    cout<<"\n==========output==========\n";
+
+    Tuple tuple({});
+
+    while(executor->getNext(&tuple)){
+        tuple.print();
+    }
+
+    executor->close();
+
+    cout<<"=============================\n";
+    
+
+
 }
