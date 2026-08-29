@@ -1,11 +1,11 @@
 #include"Planner.hpp"
 
-AbstractPlanNode* Planner::Plan(BoundStatement* statement){
+AbstractPlanNode* Planner::Plan(unique_ptr<BoundStatement> statement){
 
     switch(statement->type()){
         //if stmt type is select call it's function to handle it
         case BoundStatementType::SELECT:{
-            return PlanSelect(dynamic_cast<BoundSelectStatement*>(statement));
+            return PlanSelect(dynamic_cast<BoundSelectStatement*>(statement.get()));
         }
 
         default:
@@ -21,7 +21,6 @@ AbstractPlanNode* Planner::PlanSelect(BoundSelectStatement* statement){
     //first from table to determine where to fetch the very first data
     int tabl_oid = statement->from_table.table_oid;
     AbstractPlanNode* plan = new SeqScanPlan(tabl_oid);
-
 
     //second is where, so we filter onlt needed rows
     if(statement->where != nullptr){

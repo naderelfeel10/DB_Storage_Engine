@@ -11,7 +11,7 @@ class Planner {
 
 public:
 
-    AbstractPlanNode* Plan(BoundStatement* statement);
+    AbstractPlanNode* Plan(unique_ptr<BoundStatement> statement);
 
 private:
 

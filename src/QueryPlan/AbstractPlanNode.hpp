@@ -24,6 +24,13 @@ public:
     PlanType type;
     virtual ~AbstractPlanNode() = default;
 
+    virtual void PrintTree(int indent = 0) const = 0;
+    
+    static void PrintIndent(int indent){
+        for(int i = 0; i < indent; i++){
+            cout << "  ";
+        }
+    }
 };
 
 #endif

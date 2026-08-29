@@ -14,12 +14,21 @@ public:
     SeqScanPlan(int table_oid):table_oid(table_oid){
         type = PlanType::SEQ_SCAN;
     }
+
+    //just printing
+    void PrintTree(int indent = 0) const override{
+
+        PrintIndent(indent);
+        cout << "SeqScan"
+             << " [table_oid=" << table_oid << "]"
+             << endl;
+    
+}
 };
 
 
 //now filter and it need the child node and a condition to filter on
 class FilterPlan : public AbstractPlanNode {
-
 
 public:
 
@@ -30,6 +39,17 @@ public:
         type = PlanType::FILTER;
     }
 
+    //printing
+    void PrintTree(int indent = 0)const override {
+
+        PrintIndent(indent);
+
+        cout << "Filter";
+        cout << endl;
+        if (child != nullptr) {
+            child->PrintTree(indent + 1);
+        }
+    }
 };
 
 //projection and it need cols to select and the child node
@@ -43,6 +63,17 @@ public:
     
     ProjectionPlan(const vector<BoundSelectItem>& expressions, AbstractPlanNode* child):expressions(expressions),child(child){
         type = PlanType::PROJECTION;
+    }
+    //printing
+    void PrintTree(int indent = 0)const override {
+
+        PrintIndent(indent);
+
+        cout << "Projection";
+        cout << endl;
+        if (child != nullptr) {
+            child->PrintTree(indent + 1);
+        }
     }
 };
 
