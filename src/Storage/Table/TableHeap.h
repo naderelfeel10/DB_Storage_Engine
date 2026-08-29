@@ -92,6 +92,7 @@ class TableHeap{
 
         int getColIndex(string col_name);
         int get_tuples_num(){return this->num_of_tuples;}
+        vector<Column>get_output_schema(){return this->cols;}
     
         void deleteTableHeap();
         ~TableHeap();

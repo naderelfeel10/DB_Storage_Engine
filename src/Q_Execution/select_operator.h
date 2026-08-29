@@ -1,5 +1,5 @@
-#ifndef SELECT_H
-#define SELECT_H
+#ifndef SELECT_OPERATOR_H
+#define SELECT_OPERATOR_H
 
 #include"../Storage/Table/TableIterator.h"
 #include"../Storage/Table/TableHeap.h"
@@ -20,7 +20,9 @@ class Select:public AbstractExecuter{
         AbstractExecuter* child_operator;
         AbstractPredicate* predicate;
     public:
-        Select(AbstractExecuter* child_operator, AbstractPredicate* predicate):child_operator(child_operator),predicate(predicate){};
+        Select(AbstractExecuter* child_operator, AbstractPredicate* predicate):child_operator(child_operator),predicate(predicate){
+            open();
+        };
         void open();
         void close();
         bool getNext(Tuple* tuple);

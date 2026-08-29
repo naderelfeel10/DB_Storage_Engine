@@ -9,7 +9,7 @@ SeqScan::SeqScan(TableHeap* table_heap){
 }
 void SeqScan::open(){
     this->curr_rid_pointer = this->Table_heap->getStartingRID();
-    this->output_schema = this->Table_heap->getCols();
+    this->output_schema = this->Table_heap->get_output_schema();
 }
 void SeqScan::close(){
     this->curr_rid_pointer = RID(-1,-1);
