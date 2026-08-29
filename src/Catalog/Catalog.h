@@ -70,7 +70,7 @@ class Catalog
     public:
         Catalog(BufferPoolManager* BPM, bool createNew);
 
-        TableInfo* CreateTable(string table_name, vector<Column>schema);
+        TableInfo* CreateTable(const string& table_name, const vector<Column>&schema);
         void DropTable(string table_name);
         TableInfo* GetTable(string table_name);
 

@@ -22,7 +22,7 @@ Catalog::Catalog(BufferPoolManager* BPM, bool createNew):BPM(BPM){
     
     }
 }
-
+/*
 TableInfo* Catalog::CreateTable(string table_name, vector<Column>schema){
     //check if table already exists :
     if(this->tables.find(table_name) != tables.end()){
@@ -30,19 +30,56 @@ TableInfo* Catalog::CreateTable(string table_name, vector<Column>schema){
         return nullptr;       
     }else{
         //prepare table meta data, then create tableInfo
-        TableHeap* heap = new TableHeap(BPM, -1, -1);
         auto* info = new TableInfo();
         info->table_name = table_name;
         info->schema = schema;
+        cout<<info->schema.size()<<", "<<schema.size()<<endl;
+
+        TableHeap* heap = new TableHeap(BPM, -1, -1);
+
+        heap->setCols(schema);
+        cout<<"schema size : "<<heap->get_output_schema().size()<<endl;
+
         info->table_heap = heap;
         info->first_page_id = heap->get_first_page_id();
 
         tables[table_name] = info;
 
+
         return info;
     }
 
 }
+*/
+
+//create table refactor
+TableInfo* Catalog::CreateTable(const string& table_name,const vector<Column>& schema){
+    //check if table already exists :
+    if(tables.find(table_name) != tables.end()){
+        cerr<<"Table already exists: "<<table_name<<endl;
+        return nullptr;
+    }
+
+    //create the physical table storage
+    TableHeap* heap = new TableHeap(BPM, -1, -1);
+
+    //configure table heap by setting the name and schema
+    heap->setTableName(table_name);
+    heap->setCols(schema);
+
+    //create catalog metadata
+    TableInfo* info = new TableInfo();
+
+    info->table_name = table_name;
+    info->schema = schema;
+    info->table_heap = heap;
+    info->first_page_id = heap->get_first_page_id();
+
+    tables[table_name] = info;
+
+    return info;
+}
+
 
 void Catalog::DropTable(string table_name){
     TableInfo* info = tables[table_name];
