@@ -22,6 +22,16 @@ AbstractPlanNode* Planner::PlanSelect(BoundSelectStatement* statement){
     int tabl_oid = statement->from_table.table_oid;
     AbstractPlanNode* plan = new SeqScanPlan(tabl_oid);
 
+    //check for joins
+    //we might get multiple joins in the same query
+    for (auto& join : statement->joins){
+
+        //extract right table
+        AbstractPlanNode* right_plan = new SeqScanPlan(join.right_table.table_oid);
+        //here plan represent the left side
+        plan = new JoinPlan(join.type, join.condition, plan, right_plan);
+    }
+
     //second is where, so we filter onlt needed rows
     if(statement->where != nullptr){
         plan = new FilterPlan(statement->where, plan);

@@ -78,4 +78,97 @@ public:
 };
 
 
+//join plan, it has join type, condtion, left and right childs
+class JoinPlan : public AbstractPlanNode{
+private:
+    JoinType join_type;
+    BoundExpression* condition;
+    AbstractPlanNode* left;
+    AbstractPlanNode* right;
+
+public:
+    JoinPlan(JoinType join_type, BoundExpression* condition, AbstractPlanNode* left, AbstractPlanNode* right){
+
+        this->type = PlanType::JOIN;
+        this->join_type = join_type;
+        this->condition = condition;
+        this->left = left;
+        this->right = right;
+    }
+
+    //getters
+    JoinType getJoinType(){
+        return join_type;
+    }
+
+    BoundExpression* getCondition(){
+        return condition;
+    }
+
+    AbstractPlanNode* getLeft(){
+        return left;
+    }
+
+    AbstractPlanNode* getRight(){
+        return right;
+    }
+
+    //just printing
+    void PrintTree(int indent = 0) const override{
+
+        PrintIndent(indent);
+
+        cout << "JOIN";
+
+        switch (join_type) {
+
+            case JoinType::INNER:
+                cout << " [INNER]";
+                break;
+
+            case JoinType::LEFT:
+                cout << " [LEFT]";
+                break;
+
+            case JoinType::RIGHT:
+                cout << " [RIGHT]";
+                break;
+        }
+
+        cout << endl;
+
+
+        // Print join condition
+        if (condition != nullptr) {
+
+            PrintIndent(indent + 1);
+            cout << "Condition:" << endl;
+
+            condition->PrintTree(
+                "|   ",
+                true
+            );
+        }
+
+
+        // Print left child
+        PrintIndent(indent + 1);
+        cout << "Left:" << endl;
+
+        if (left != nullptr) {
+            left->PrintTree(indent + 2);
+        }
+
+
+        // Print right child
+        PrintIndent(indent + 1);
+        cout << "Right:" << endl;
+
+        if (right != nullptr) {
+            right->PrintTree(indent + 2);
+        }
+    }
+    
+};
+
 #endif

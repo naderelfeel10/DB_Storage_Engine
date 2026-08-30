@@ -76,6 +76,22 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
 
             return new Select(child, predicate);
         }
+
+        case PlanType::JOIN:{
+            //cast into join plan
+            JoinPlan* join_plan = static_cast<JoinPlan*>(plan);
+            //then create executers for left adn right childs
+            AbstractExecuter* left_child = createExecutor(join_plan->getLeft());
+            AbstractExecuter* right_child = createExecutor(join_plan->getRight());
+            
+            //then build the predicate
+            AbstractPredicate* predicate = build_predicate(join_plan->getCondition(),left_child);
+
+
+            return new NestedLoopJoin(left_child, right_child, predicate, INNER_JOIN);
+
+
+        }
         default:{
             throw runtime_error("invalid planType");
             return nullptr;
@@ -199,8 +215,10 @@ Column* ExecutorFactory::expr_to_col(BoundExpression* expr,AbstractExecuter* chi
             }
              //fetch schema from the child
             vector<Column> schema = child->get_output_schema();
-            cout<<"schema size : "<<schema.size()<<endl;
-            cout<<"col ref : "<<col_ref->column_name<<", "<<col_ref->column_oid<<endl;
+            
+            //cout<<"schema size : "<<schema.size()<<endl;
+            //cout<<"col ref : "<<col_ref->column_name<<", "<<col_ref->column_oid<<endl;
+            
             //then select the needed col
             Column* result = new Column(schema[col_ref->column_oid]);
 
@@ -442,10 +460,14 @@ int main()
     //                        "WHERE u.user_id = 2 order by u.user_id limit 10 offset 5;";
                             
 
-    //const string sql = "select u.firstName from User u where u.user_id > 10;";
-    string sql;
-    cout<<"ELFEEL_DB> ";
-    getline(cin, sql);
+    const string sql = "select u.firstName, Orders.isShipped from User u where u.user_id > 10 inner join Orders on u.user_id=Orders.user_id;";
+    
+    //string sql;
+    //cout<<"ELFEEL_DB> ";
+    //getline(cin, sql);
+
+    //const string sql = "SELECT u.user_id, u.firstName from User u inner join Orders on u.user_id = Orders.user_id;";
+
 
     hsql::SQLParserResult result;
 
