@@ -28,6 +28,13 @@ bool Select::getNext(Tuple* tuple){
     return false;
 }
 
+
+bool Select::has_column(string col_name){
+    for(auto&col:this->get_output_schema()){
+        if(col.getColName()==col_name)return true;
+    }
+    return false;
+}
 ///////////////////////////////
 /*
 vector<string> tables1;

@@ -71,6 +71,8 @@ class SortAggregateExecuter: public AbstractExecuter{
         Tuple get_output_tuple();
         bool is_same_group();
         string get_function_string(GroupingFunction func);
+
+        bool has_column(string col_name);
 };
 
 #endif

@@ -65,5 +65,6 @@ class MergeJoin : public AbstractExecuter{
         void set_output_schema();
         vector<Column> get_output_schema();
 
+        bool has_column(string col_name);
 };
 #endif

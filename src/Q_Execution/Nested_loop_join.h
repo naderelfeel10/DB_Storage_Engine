@@ -50,7 +50,7 @@ class NestedLoopJoin : public AbstractExecuter{
         TableHeap* getOuterTableHeap(){return this->outer_table->getTableHeap();};
         TableHeap* getInnerTableHeap(){return this->inner_table->getTableHeap();};
 
-
+        bool has_column(string col_name);
 };
 
 #endif

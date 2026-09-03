@@ -29,6 +29,7 @@ class Select:public AbstractExecuter{
         TableHeap* getTableHeap(){return this->child_operator->getTableHeap();}
         vector<Column> get_output_schema(){return this->child_operator->get_output_schema();}
 
+        bool has_column(string col_name);
 };
 
 #endif

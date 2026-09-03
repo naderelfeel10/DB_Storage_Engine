@@ -217,7 +217,13 @@ bool HashAggregateExecuter::getNext(Tuple* tuple){
     
 }
 
-
+bool HashAggregateExecuter::has_column(string col_name){
+    for(auto&col:this->get_output_schema()){
+        if(col.getColName()==col_name)return true;
+    }
+    return false;
+}
+/*
 vector<string> tables1;
 map<string, TableHeap*>tables_map1;
 map<string, vector<RID>> tables_rids1;
@@ -262,7 +268,6 @@ void insertIntoUserTable(){
         tables_rids1["User"].push_back(rid);
     }
 }
-
 
 int
 main(){
@@ -316,4 +321,4 @@ main(){
     cout<<"done"<<endl;
     */
 
-}
+//}

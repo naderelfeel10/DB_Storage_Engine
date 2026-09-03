@@ -33,6 +33,7 @@ void NestedLoopJoin::set_output_schema(){
     // combine:
     outer_schema.insert(outer_schema.end(), inner_schema.begin(), inner_schema.end());
     this->output_schema = outer_schema;
+    for(auto&col:this->output_schema)col.printCol();
 }
 
 
@@ -147,6 +148,12 @@ void NestedLoopJoin::close(){
     this->inner_table->close();
 }
 
+bool NestedLoopJoin::has_column(string col_name){
+    for(auto&col:this->get_output_schema()){
+        if(col.getColName()==col_name)return true;
+    }
+    return false;
+}
 //////////////////////////////
 //////////////////////////////
 

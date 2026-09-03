@@ -77,6 +77,9 @@ class HashAggregateExecuter: public AbstractExecuter{
         Tuple get_output_tuple(vector<Field>curr_grouping_fields,vector<AggValues>agg_state);
         bool is_same_group();
         string get_function_string(GroupingFunction func);
+
+        bool has_column(string col_name);
+
 };
 
 #endif

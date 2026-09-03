@@ -222,7 +222,12 @@ void MergeJoin::close(){
     this->inner_table->close();
 }
 
-
+bool MergeJoin::has_column(string col_name){
+    for(auto&col:this->get_output_schema()){
+        if(col.getColName()==col_name)return true;
+    }
+    return false;
+}
 
 //////////////////////////////////////////////////
 //////////////////////////////////////////////////

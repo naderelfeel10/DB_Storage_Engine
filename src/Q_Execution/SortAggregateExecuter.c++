@@ -216,6 +216,12 @@ bool SortAggregateExecuter::getNext(Tuple* tuple){
     return false;
 }
 
+bool SortAggregateExecuter::has_column(string col_name){
+    for(auto&col:this->get_output_schema()){
+        if(col.getColName()==col_name)return true;
+    }
+    return false;
+}
 /*
 vector<string> tables1;
 map<string, TableHeap*>tables_map1;

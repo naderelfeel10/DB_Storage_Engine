@@ -53,6 +53,7 @@ class ExternalMergeSort :public AbstractExecuter {
             void insert_tuple(int& new_page_id,Page*& new_page, PageHeader*& new_page_header, int page_id, int slot_num, int &left, int &right);
             
             void getTuple(RID rid, Tuple& tuple);
+            bool has_column(string col_name);
 
 
 };

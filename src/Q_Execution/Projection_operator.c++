@@ -11,8 +11,13 @@ void Projection::open(){
     this->output_schema.clear();
     this->projection_col_indecies.clear();
 
+    for(auto&col:child_schema)col.printCol();
+
+
     for(auto& col_name:this->projection_cols){
+        cout<<col_name<<endl;
         for(int i=0;i<child_schema.size();i++){
+
             if(col_name == child_schema[i].getColName()){
                 // if cols match, then save col itself
                 this->output_schema.push_back(child_schema[i]);
@@ -23,6 +28,7 @@ void Projection::open(){
             }
         }
     }
+    for(auto&col:this->output_schema)col.printCol();
 
 }
 
@@ -44,6 +50,12 @@ bool Projection::getNext(Tuple* tuple){
     return true;
 }
 
+bool Projection::has_column(string col_name){
+    for(auto&col:this->get_output_schema()){
+        if(col.getColName()==col_name)return true;
+    }
+    return false;
+}
 ///////////////////////////////////////////
 
 /*

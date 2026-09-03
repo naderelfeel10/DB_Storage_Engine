@@ -10,6 +10,8 @@ SeqScan::SeqScan(TableHeap* table_heap){
 void SeqScan::open(){
     this->curr_rid_pointer = this->Table_heap->getStartingRID();
     this->output_schema = this->Table_heap->get_output_schema();
+
+    for(auto&col:this->output_schema)col.printCol();
 }
 void SeqScan::close(){
     this->curr_rid_pointer = RID(-1,-1);
@@ -57,6 +59,13 @@ bool SeqScan::getNext(Tuple* tuple){
     this->curr_rid_pointer = RID(curr_page_id,next_slot_num);
     return true;
 
+}
+
+bool SeqScan::has_column(string col_name){
+    for(auto&col:this->get_output_schema()){
+        if(col.getColName()==col_name)return true;
+    }
+    return false;
 }
 
 ///////////////////////////////

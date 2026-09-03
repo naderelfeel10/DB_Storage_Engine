@@ -24,6 +24,7 @@ class SeqScan: public AbstractExecuter{
         TableHeap* getTableHeap()override{return this->Table_heap;}
         vector<Column> get_output_schema(){return this->output_schema;}
 
+        bool has_column(string col_name);
 };
 
 #endif

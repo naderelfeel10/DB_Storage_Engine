@@ -91,6 +91,13 @@ void IndexedNestedLoopJoin::getTuple(RID rid, Tuple& tuple) {
     page->getTuple(rid.getSlotNum(), tuple);
 }
 
+bool IndexedNestedLoopJoin::has_column(string col_name){
+    for(auto&col:this->get_output_schema()){
+        if(col.getColName()==col_name)return true;
+    }
+    return false;
+}
+
 ////////////////////////////////////////////
 ///////////////////////////////////////////
 

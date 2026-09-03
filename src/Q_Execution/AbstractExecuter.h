@@ -18,6 +18,7 @@ class AbstractExecuter{
     
     virtual TableHeap* getTableHeap()=0;
     virtual vector<Column> get_output_schema()=0;
+    virtual bool has_column(string col_name)=0;
 
 };
 
