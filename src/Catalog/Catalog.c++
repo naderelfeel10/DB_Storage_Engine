@@ -71,6 +71,7 @@ TableInfo* Catalog::CreateTable(const string& table_name,const vector<Column>& s
     TableInfo* info = new TableInfo();
 
     info->table_name = table_name;
+    info->table_id = ++next_table_id;
     info->schema = schema;
     info->table_heap = heap;
     info->first_page_id = heap->get_first_page_id();
@@ -118,6 +119,10 @@ void Catalog::save_catalog(){
     char* buffer = new char[PAGE_SIZE];
     int index{0};
     
+    //save next_table_id
+    memcpy(buffer+index, &next_table_id, sizeof(next_table_id));
+    index += sizeof(next_table_id);
+
     //save first_page_id
     memcpy(buffer+index, &catalog_first_page_id, sizeof(catalog_first_page_id));
     index += sizeof(catalog_first_page_id);

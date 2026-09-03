@@ -60,7 +60,7 @@ class Catalog
         // table_name : table_info
         unordered_map<string,TableInfo*> tables;
         BufferPoolManager* BPM;
-
+        int next_table_id{0};
         int catalog_first_page_id{-1};
         int catalog_last_page_id{-1};
 
