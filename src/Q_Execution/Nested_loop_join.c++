@@ -38,6 +38,7 @@ void NestedLoopJoin::set_output_schema(){
 
 
 vector<Column> NestedLoopJoin::get_output_schema(){
+    
     return this->output_schema;
 }
 

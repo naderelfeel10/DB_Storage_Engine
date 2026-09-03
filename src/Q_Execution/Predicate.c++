@@ -78,12 +78,12 @@ bool Predicate::evaluate(const Tuple* tuple, vector<Column> cols) {
     
     
     for (size_t i = 0; i < cols.size(); ++i) {
-        cout<<this->left_col->getColName()<<",,,,"<<cols[i].getColName()<<endl;
+        //cout<<this->left_col->getColName()<<",,,,"<<cols[i].getColName()<<endl;
 
         if (this->left_col->getColName() == cols[i].getColName()) {
             active_left_field = new Field(tuple->fields[i]); 
         }
-        cout<<this->right_col->getColName()<<" ,,,, "<<cols[i].getColName()<<endl;
+        //cout<<this->right_col->getColName()<<" ,,,, "<<cols[i].getColName()<<endl;
         
         if (this->right_col->getColName() == cols[i].getColName()) {
             active_right_field = new Field(tuple->fields[i]); 

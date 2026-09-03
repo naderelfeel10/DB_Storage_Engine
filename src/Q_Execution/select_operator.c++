@@ -17,7 +17,8 @@ bool Select::getNext(Tuple* tuple){
     // now the tuple has the data of the next tuple, i will check if it satisfies the condition
 
      // extract cols from table heap in child
-    vector<Column>cols = (this->child_operator)->getTableHeap()->getCols();
+    //vector<Column>cols = (this->child_operator)->getTableHeap()->getCols();
+    vector<Column>cols = this->child_operator->get_output_schema();
     while(this->child_operator->getNext(tuple)){
 
         if(this->predicate->evaluate(tuple, cols)){
@@ -30,8 +31,9 @@ bool Select::getNext(Tuple* tuple){
 
 
 bool Select::has_column(string col_name){
+    string table_name = this->child_operator->getTableHeap()->getTableName();
     for(auto&col:this->get_output_schema()){
-        if(col.getColName()==col_name)return true;
+        if(table_name+'.'+col.getColName()==col_name)return true;
     }
     return false;
 }

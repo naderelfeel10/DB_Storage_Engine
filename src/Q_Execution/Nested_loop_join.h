@@ -38,7 +38,9 @@ class NestedLoopJoin : public AbstractExecuter{
     public:
         NestedLoopJoin(AbstractExecuter* outer_table,AbstractExecuter* inner_table,
                        AbstractPredicate* join_condition, join_types join_type=INNER_JOIN):
-            outer_table(outer_table), inner_table(inner_table), join_condition(join_condition),join_type(join_type){}
+            outer_table(outer_table), inner_table(inner_table), join_condition(join_condition),join_type(join_type){
+                this->open();
+            }
         
         void open()override;
         void close()override;
