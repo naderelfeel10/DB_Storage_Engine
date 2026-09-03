@@ -27,8 +27,10 @@ public:
     AbstractExecuter* createExecutor(AbstractPlanNode* plan);
     
     AbstractPredicate* build_predicate(BoundExpression* expression, AbstractExecuter* child);
+    AbstractPredicate* build_join_predicate(BoundExpression* expression, AbstractExecuter* left_child, AbstractExecuter* right_child);
 
     Column* expr_to_col(BoundExpression* expr,AbstractExecuter* child);
     Column* const_to_col(BoundConstantExpression* expr);
 
+    Column* expr_to_join_col(BoundExpression* expr,AbstractExecuter* left_child,AbstractExecuter* right_child);
 };

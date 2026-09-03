@@ -20,6 +20,12 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
             // get table_info, then get the table heap
             TableInfo* table_info = catalog->GetTable(table_name);
             TableHeap* table_heap = table_info->get_table_heap();
+            
+            //i need to pass the alias if exists
+            if(bound_table.alias.size()>0)
+                table_heap->setTableName(bound_table.alias);
+            
+            cout<<bound_table.alias<<" || "<<table_heap->getTableName()<<endl;
 
             assert(table_heap->get_output_schema().size() > 0);
 
@@ -55,8 +61,10 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
                 if(column_ref == nullptr){
                     throw runtime_error("col ref is nullptr");
                 }
+                string col_name = column_ref->table_name+'.'+column_ref->column_name;
+                cout<<col_name<<endl;
                 //push col_name into the col_ref
-                projection_cols.push_back(column_ref->column_name);
+                projection_cols.push_back(col_name);
             }
         
             //now return the operator
@@ -85,7 +93,7 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
             AbstractExecuter* right_child = createExecutor(join_plan->getRight());
             
             //then build the predicate
-            AbstractPredicate* predicate = build_predicate(join_plan->getCondition(),left_child);
+            AbstractPredicate* predicate = build_join_predicate(join_plan->getCondition(),left_child, right_child);
 
 
             return new NestedLoopJoin(left_child, right_child, predicate, INNER_JOIN);
@@ -142,7 +150,9 @@ AbstractPredicate* ExecutorFactory::build_predicate(BoundExpression* expression,
         case BoundOperatorType::EQ:{
             //string col_name = dynamic_cast<BoundColumnRef*>(binary->left)->column_name;
             Column* left_col = expr_to_col(binary->left, child);
+            left_col->printCol();
             Column* right_col = expr_to_col(binary->right, child);
+            right_col->printCol();
 
             return new Predicate(left_col, right_col, PredicateType::EQ);
         }
@@ -195,6 +205,99 @@ AbstractPredicate* ExecutorFactory::build_predicate(BoundExpression* expression,
 }
 
 
+AbstractPredicate* ExecutorFactory::build_join_predicate(BoundExpression* expression,AbstractExecuter* left_child,AbstractExecuter* right_child){
+    if (expression == nullptr) {
+        return nullptr;
+    }
+
+    if (expression->exp_type != BoundExpressionType::BINARY) {
+        throw runtime_error("Join predicate must be binary");
+    }
+
+    auto* binary =static_cast<BoundBinaryExpression*>(expression);
+
+    switch(binary->op){
+
+        case BoundOperatorType::EQ:{
+
+            Column* left_col = expr_to_join_col(binary->left, left_child, right_child);
+            Column* right_col = expr_to_join_col(binary->right, left_child, right_child);
+
+            return new Predicate(left_col, right_col, PredicateType::EQ);
+        }
+
+        case BoundOperatorType::NE:{
+
+            Column* left_col =expr_to_join_col(binary->left, left_child, right_child);
+
+            Column* right_col =expr_to_join_col(binary->right, left_child, right_child);
+
+            return new Predicate(left_col, right_col, PredicateType::NE);
+        }
+
+        case BoundOperatorType::GT:{
+
+            Column* left_col =expr_to_join_col(binary->left, left_child, right_child);
+            Column* right_col = expr_to_join_col(binary->right, left_child, right_child);
+
+            return new Predicate(left_col, right_col, PredicateType::GT);
+        }
+
+        default:
+            throw runtime_error("unsupported join predicate");
+    }
+}
+
+
+Column* ExecutorFactory::expr_to_join_col(BoundExpression* expr,AbstractExecuter* left_child,AbstractExecuter* right_child){
+    
+    if(expr == nullptr){
+        throw runtime_error("Expression is null");
+    }
+
+    switch (expr->exp_type) {
+
+        case BoundExpressionType::COLUMN_REF: {
+
+            auto* col_ref = static_cast<BoundColumnRef*>(expr);
+
+            AbstractExecuter* target_child = nullptr;
+
+            //for join, I have to determine if it's left or right col
+            if(left_child->has_column(col_ref->column_name)){
+                target_child = left_child;
+            }
+            else if(right_child->has_column(col_ref->column_name)){
+                target_child = right_child;
+            }
+
+            //col not found
+            else
+            throw runtime_error("column is not found ....");
+            
+            vector<Column> schema = target_child->get_output_schema();
+
+            if(col_ref->column_oid < 0 || col_ref->column_oid >= schema.size()){
+                throw runtime_error("invlaid col oid");
+            }
+
+            return new Column(schema[col_ref->column_oid]);
+        }
+
+        //normal const handling 
+        case BoundExpressionType::CONSTANT: {
+
+            auto* constant = static_cast<BoundConstantExpression*>(expr);
+
+            return const_to_col(constant);
+        }
+
+        default:
+            throw runtime_error(
+                "Unsupported join expression"
+            );
+    }
+}
 
 
 // expression can't just be passed to select operator
@@ -215,12 +318,14 @@ Column* ExecutorFactory::expr_to_col(BoundExpression* expr,AbstractExecuter* chi
             }
              //fetch schema from the child
             vector<Column> schema = child->get_output_schema();
+            for(auto&col : schema)col.printCol();
             
             //cout<<"schema size : "<<schema.size()<<endl;
             //cout<<"col ref : "<<col_ref->column_name<<", "<<col_ref->column_oid<<endl;
             
             //then select the needed col
             Column* result = new Column(schema[col_ref->column_oid]);
+            result->printCol();
 
             return result;
         }
@@ -317,6 +422,35 @@ vector<Column> CreateOrdersSchema(){
     };
 }
 
+/// dummy order insertions
+void InsertIntoOrdersTable(TableHeap* orders_table) {
+
+    int order_id = 1;
+
+    for (int user_id = 100; user_id < 170; user_id++) {
+
+        // Some users have 1 order, some 2, some 3
+        int num_orders = (user_id % 3) + 1;
+
+        for (int j = 0; j < num_orders; j++) {
+
+            Field o1(TYPE_INT, order_id);                        
+            Field o2(TYPE_INT, user_id);                  
+
+            float amount = 50.0f + (user_id - 100) * 10.5f + j * 25.0f;
+            Field o3(TYPE_FLOAT, amount);                  
+
+            bool shipped = ((order_id % 2) == 0);
+            Field o4(TYPE_BOOL, shipped);              
+
+            Tuple tuple({o1, o2, o3, o4});
+
+            RID rid = orders_table->insertTuple(tuple);
+
+            order_id++;
+        }
+    }
+}
 /*
 int
 main(){
@@ -439,6 +573,9 @@ int main()
         return 0;
     }
 
+    TableHeap* order_table = orders_info->table_heap;
+
+    InsertIntoOrdersTable(order_table);
 
     cout<<"\n==========CATALOG=========="<<endl;
 
@@ -460,13 +597,13 @@ int main()
     //                        "WHERE u.user_id = 2 order by u.user_id limit 10 offset 5;";
                             
 
-    const string sql = "select u.firstName, Orders.isShipped from User u where u.user_id > 10 inner join Orders on u.user_id=Orders.user_id;";
+    //const string sql = "select u.firstName, Orders.isShipped from User u where u.user_id > 10 inner join Orders on u.user_id=Orders.user_id;";
     
     //string sql;
-    //cout<<"ELFEEL_DB> ";
+    cout<<"ELFEEL_DB> ";
     //getline(cin, sql);
 
-    //const string sql = "SELECT u.user_id, u.firstName from User u inner join Orders on u.user_id = Orders.user_id;";
+    const string sql = "SELECT u.user_id, Orders.user_id, u.firstName from User u inner join Orders on u.user_id = Orders.user_id;";
 
 
     hsql::SQLParserResult result;
