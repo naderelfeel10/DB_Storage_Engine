@@ -219,7 +219,7 @@ AbstractPredicate* ExecutorFactory::build_join_predicate(BoundExpression* expres
     switch(binary->op){
 
         case BoundOperatorType::EQ:{
-
+            binary->PrintTree();
             Column* left_col = expr_to_join_col(binary->left, left_child, right_child);
             Column* right_col = expr_to_join_col(binary->right, left_child, right_child);
 
@@ -263,11 +263,13 @@ Column* ExecutorFactory::expr_to_join_col(BoundExpression* expr,AbstractExecuter
 
             AbstractExecuter* target_child = nullptr;
 
+            string res_col_name = col_ref->table_name+'.'+col_ref->column_name;
+
             //for join, I have to determine if it's left or right col
-            if(left_child->has_column(col_ref->column_name)){
+            if(left_child->has_column(res_col_name)){
                 target_child = left_child;
             }
-            else if(right_child->has_column(col_ref->column_name)){
+            else if(right_child->has_column(res_col_name)){
                 target_child = right_child;
             }
 
@@ -277,11 +279,17 @@ Column* ExecutorFactory::expr_to_join_col(BoundExpression* expr,AbstractExecuter
             
             vector<Column> schema = target_child->get_output_schema();
 
+            for(auto&col:target_child->get_output_schema())col.printCol();
+
             if(col_ref->column_oid < 0 || col_ref->column_oid >= schema.size()){
                 throw runtime_error("invlaid col oid");
             }
-
-            return new Column(schema[col_ref->column_oid]);
+            Column* res_col = new Column(schema[col_ref->column_oid]);
+            
+            res_col->setColName(res_col_name);
+            //return new Column(schema[col_ref->column_oid]);
+            cout<<res_col->getColName()<<endl;
+            return res_col;
         }
 
         //normal const handling 
@@ -312,6 +320,7 @@ Column* ExecutorFactory::expr_to_col(BoundExpression* expr,AbstractExecuter* chi
         case BoundExpressionType::COLUMN_REF:{
 
             BoundColumnRef* col_ref = static_cast<BoundColumnRef*>(expr);
+            cout<<col_ref->column_name<<endl;
 
             if(child == nullptr){
                 throw runtime_error("child executer iis null");
@@ -599,11 +608,11 @@ int main()
 
     //const string sql = "select u.firstName, Orders.isShipped from User u where u.user_id > 10 inner join Orders on u.user_id=Orders.user_id;";
     
-    //string sql;
+    string sql;
     cout<<"ELFEEL_DB> ";
-    //getline(cin, sql);
+    getline(cin, sql);
 
-    const string sql = "SELECT u.user_id, Orders.user_id, u.firstName from User u inner join Orders on u.user_id = Orders.user_id;";
+    //const string sql = "SELECT u.user_id, Orders.user_id, u.firstName from User u inner join Orders on u.user_id = Orders.user_id where u.user_id > 120;";
 
 
     hsql::SQLParserResult result;
