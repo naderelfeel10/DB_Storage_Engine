@@ -419,7 +419,7 @@ JoinType Binder::BindJoinType(hsql::JoinType type){
 }
 
 
-
+/*
 // binding join clause
 BoundJoinClause Binder::BindJoin(const hsql::JoinDefinition* join){
 
@@ -467,6 +467,41 @@ BoundJoinClause Binder::BindJoin(const hsql::JoinDefinition* join){
     
     
     return result;
+}
+*/
+
+BoundJoinClause Binder::BindJoin(const hsql::JoinDefinition* join){
+    if(join == nullptr){
+        throw runtime_error("null JOIN definition");
+    }
+
+    if(join->right == nullptr){
+        throw runtime_error("no right table");
+    }
+    //bind right table
+    BoundTable right_table = BindTable(join->right);
+
+    right_table.printTable();
+    //add it to the context
+    context->AddTable(right_table);
+
+    BoundExpression* condition = nullptr;
+    if(join->condition != nullptr){
+
+        cout<<"binding join condition..."<<endl;
+        condition = BindExpression(join->condition);
+
+        if(condition == nullptr){
+            throw runtime_error("failed to bind join condition");
+        }
+        if(condition->return_type != TYPE_BOOL){
+            throw runtime_error("join condition must evaluate to bool");
+        }
+    }
+    //bind join type
+    JoinType type = BindJoinType(join->type);
+
+    return BoundJoinClause(type,right_table,condition);
 }
 
 
