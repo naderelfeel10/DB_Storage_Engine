@@ -18,8 +18,10 @@ class Column{
 
         Column(const Field* field, string col_name,int col_max_size);
         Column(FieldType f_type, string col_name,int col_max_size):field(nullptr),field_type(f_type),col_name(col_name),col_max_size(col_max_size){};
-        Column(){}
-        
+        //Column(){}
+        Column(): field(nullptr), field_type(TYPE_INT), col_name(""), col_max_size(0){}
+
+
         string getColName();
         void setColName(string col_name){this->col_name=col_name;}
 

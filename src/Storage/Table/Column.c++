@@ -87,6 +87,7 @@ int Column::getColSize() {
     return 1 + sizeof(this->col_max_size) + sizeof(int) + this->col_name.length()+ 
            (field == nullptr ? 0 : this->field->getSerializedSize());
 }
+/*
 // c1 = c2;
 // operator overloading 
 Column& Column::operator=(const Column& other) {
@@ -102,6 +103,32 @@ Column& Column::operator=(const Column& other) {
 
     return *this;
 }
+*/
+
+//= operator overloading, fixing nullptr field
+Column& Column::operator=(const Column& other){
+    if(this == &other) return *this;
+
+    field_type = other.field_type;
+    col_name = other.col_name;
+    col_max_size = other.col_max_size;
+
+    //here i have to check it there is a field, because it's used in schema and schema doesnot have field
+    if(other.field != nullptr){
+        //if null create a dummy one with same values
+        if(field == nullptr)
+            field = new Field(*other.field);
+        else
+            *field = *other.field;
+    }
+    else{
+        delete field;
+        field = nullptr;
+    }
+
+    return *this;
+}
+
 /*
 // making printing more readable
 void Column::printCol() {
