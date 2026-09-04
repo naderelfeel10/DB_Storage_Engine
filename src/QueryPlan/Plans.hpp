@@ -171,4 +171,73 @@ public:
     
 };
 
+//same idea with order_By
+class OrderByPlan : public AbstractPlanNode{
+
+private:
+
+    BoundOrderBy order_by;
+    AbstractPlanNode* child;
+
+public:
+    
+    OrderByPlan(BoundOrderBy order_by, AbstractPlanNode* child):order_by(order_by),child(child){
+        this->type = PlanType::SORT;
+    }
+    BoundOrderBy getOrderBy(){
+        return order_by;
+    }
+    AbstractPlanNode* getChild(){
+        return child;
+    }
+    BoundExpression* getExpression(){
+        return this->order_by.expression;
+    }
+    OrderType getOrderType(){
+        return this->order_by.order_type;
+    }
+
+    //just printing
+    void PrintTree(int indent = 0)const override{
+        PrintIndent(indent);
+
+        cout << "ORDER BY";
+
+        // Print ASC / DESC
+        switch (order_by.order_type) {
+            case OrderType::ASC:
+                cout << " [ASC]";
+                break;
+
+            case OrderType::DESC:
+                cout << " [DESC]";
+                break;
+        }
+
+        cout << endl;
+
+        // Print sort expression
+        if (order_by.expression != nullptr) {
+
+            PrintIndent(indent + 1);
+            cout << "Expression:" << endl;
+
+            order_by.expression->PrintTree(
+                "|   ",
+                true
+            );
+        }
+
+        // Print child
+        PrintIndent(indent + 1);
+        cout << "Child:" << endl;
+
+        if (child != nullptr) {
+            child->PrintTree(indent + 2);
+        }
+    }
+
+    
+};
+
 #endif

@@ -37,6 +37,10 @@ AbstractPlanNode* Planner::PlanSelect(BoundSelectStatement* statement){
         plan = new FilterPlan(statement->where, plan);
     }
 
+    if(!statement->order_by.empty()) {
+        plan = new OrderByPlan(statement->order_by[0], plan);
+    }
+
     //then the projection to choose needed cols from the row
     plan = new ProjectionPlan(statement->select_list, plan);
 
