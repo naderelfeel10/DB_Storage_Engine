@@ -39,15 +39,27 @@ class ExternalMergeSort :public AbstractExecuter {
             RID  curr_rid_pointer = RID(-1,-1);
             RID  last_rid_pointer = RID(-1,-1);
 
+            vector<Column>output_schema;
+
         public:
             ExternalMergeSort(BufferPoolManager* BPM,AbstractExecuter* child_executer,Column sort_key,sorting_methods sorting_method):BPM(BPM),child_executer(child_executer)
-                                                                                                        ,sort_key(sort_key),sorting_method(sorting_method){};
+                                                                                                        ,sort_key(sort_key),sorting_method(sorting_method){
+                this->open();
+            };
+
             void open()override;
             void close()override;
             bool getNext(Tuple*tuple)override;
 
             TableHeap* getTableHeap(){return this->child_executer->getTableHeap();}
-            vector<Column> get_output_schema(){return this->child_executer->get_output_schema();}
+
+            vector<Column> get_output_schema(){
+
+                /*for(auto& col: this->child_executer->get_output_schema()){
+                    col.printCol();
+                }*/
+                return this->output_schema;
+            }
 
             void write_run_buffer_on_disk(int col_index, Tuple& tuple);
             void insert_tuple(int& new_page_id,Page*& new_page, PageHeader*& new_page_header, int page_id, int slot_num, int &left, int &right);

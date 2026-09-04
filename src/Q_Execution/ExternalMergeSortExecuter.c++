@@ -12,6 +12,13 @@ void ExternalMergeSort::open(){
     *5. flush onto disk
      */
     this->child_executer->open();
+    //set output schema
+    for(auto&col:this->child_executer->get_output_schema()){
+        string col_name = this->child_executer->getTableHeap()->getTableName()+'.'+col.getColName();
+        col.setColName(col_name);
+        //col.printCol();
+        this->output_schema.push_back(col);
+    }
     Tuple tuple({});
     // we have to create a page to store upcomming tuples at it then locally sort it then write it on disk
     this->tmp_page_id = this->BPM->newPage();
@@ -19,7 +26,7 @@ void ExternalMergeSort::open(){
     Page* page = reinterpret_cast<Page*>(tmp_page_buffer);
     
     int col_index = this->getTableHeap()->getColIndex(this->sort_key.getColName());
-
+    //cout<<col_index<<", "<<this->sort_key.getColName();
     // fetching the every tuple from the child till the table is exausted
     while(this->child_executer->getNext(&tuple)){
         // insert the tuple into the page
@@ -464,12 +471,14 @@ bool ExternalMergeSort::getNext(Tuple*tuple){
             this->curr_rid_pointer = RID(next_page_id,0);
             
             this->getTuple(this->curr_rid_pointer, *tuple);
+            //tuple->print();
             this->curr_rid_pointer = RID(next_page_id,1);
             return true;
         }
 
     }
     this->getTuple(this->curr_rid_pointer, *tuple);
+    //tuple->print();
     this->curr_rid_pointer = RID(curr_page_id,next_slot_num);
     return true;
 
@@ -489,10 +498,10 @@ void ExternalMergeSort::close(){
     
 }
 
-
 bool ExternalMergeSort::has_column(string col_name){
+    string table_name = this->child_executer->getTableHeap()->getTableName();
     for(auto&col:this->get_output_schema()){
-        if(col.getColName()==col_name)return true;
+        if(table_name+'.'+col.getColName()==col_name)return true;
     }
     return false;
 }

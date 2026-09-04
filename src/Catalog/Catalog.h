@@ -83,6 +83,9 @@ class Catalog
         unordered_map<string,TableInfo*> getTables(){
             return this->tables;
         }
+        BufferPoolManager* getBPM(){
+            return this->BPM;
+        }
 
 
 };
