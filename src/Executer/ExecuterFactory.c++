@@ -100,6 +100,27 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
 
 
         }
+        //now order by, it's based on one col only
+        case PlanType::SORT:{
+            auto* order_plan = static_cast<OrderByPlan*>(plan);
+                
+            //call the child recursevily adn resolve sorting key
+            AbstractExecuter* child = createExecutor(order_plan->getChild());
+            Column* sort_key = expr_to_col(order_plan->getExpression(), child);
+            cout<<sort_key->getColName()<<endl;
+            
+            //resolve sorting method
+            sorting_methods method;
+            
+            if(order_plan->getOrderType() == OrderType::ASC){
+                method = ASC;
+            }
+            else{
+                method = DESC;
+            }
+        
+            return new ExternalMergeSort(catalog->getBPM(), child, *sort_key, method);
+        }
         default:{
             throw runtime_error("invalid planType");
             return nullptr;
@@ -608,11 +629,12 @@ int main()
 
     //const string sql = "select u.firstName, Orders.isShipped from User u where u.user_id > 10 inner join Orders on u.user_id=Orders.user_id;";
     
-    string sql;
+    //string sql;
     cout<<"ELFEEL_DB> ";
-    getline(cin, sql);
+    //getline(cin, sql);
 
     //const string sql = "SELECT u.user_id, Orders.user_id, u.firstName from User u inner join Orders on u.user_id = Orders.user_id where u.user_id > 120;";
+    const string sql = "SELECT u.user_id,u.age from User u order by u.age DESC;";
 
 
     hsql::SQLParserResult result;
@@ -647,11 +669,17 @@ int main()
     Projection* executor = dynamic_cast<Projection*>(factory.createExecutor(plan));
 
     //execution
-    executor->open();
+    //executor->open();
 
     cout<<"\n==========output==========\n";
 
+
     Tuple tuple({});
+
+    for(auto&col:executor->get_output_schema()){
+        cout<<col.getColName()<<"   | ";
+    }
+    cout<<endl;
 
     while(executor->getNext(&tuple)){
         tuple.print();
