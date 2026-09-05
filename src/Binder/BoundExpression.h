@@ -268,4 +268,47 @@ public:
     }
 };
 
+//bound functions like count, avg, or defined functions
+class BoundFunctionExpression : public BoundExpression{
+
+public:
+    string function_name;
+    AggregateType function_type;
+    BoundExpression* argument;
+
+    BoundFunctionExpression(const string& function_name, AggregateType function_type, BoundExpression* argument)
+                            :function_name(function_name),argument(argument){
+
+                        this->function_type = function_type;
+    }
+
+
+        
+    void PrintTree(const string& prefix = "",
+                   bool isLast = true) const override {
+
+        cout << prefix
+             << "|-- Function: ";
+
+        switch (function_type) {
+            case COUNT: cout << "COUNT"; break;
+            case SUM:   cout << "SUM";   break;
+            case AVG:   cout << "AVG";   break;
+            case MAX:   cout << "MAX";   break;
+            case MIN:   cout << "MIN";   break;
+        }
+
+        cout << endl;
+
+        if (argument != nullptr) {
+            argument->PrintTree(
+                prefix + "    ",
+                true
+            );
+        }
+    }
+
+
+};
+
 #endif

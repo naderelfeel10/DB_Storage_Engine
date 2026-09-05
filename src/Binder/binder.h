@@ -12,6 +12,7 @@
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Binder\BoundSelectStatement.h"
 #include "D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\parser\external\sql-parser\src\SQLParser.h"
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\parser\external\sql-parser\src\sql\SQLStatement.h"
+#include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Q_Execution\SortAggregateExecuter.h"
 using namespace std;
 
 
@@ -38,7 +39,7 @@ public:
     BoundExpression* BindFloatLiteral(hsql::Expr* expression);
     BoundExpression* BindStringLiteral(hsql::Expr* expression);
     BoundExpression* BindOperator(const hsql::Expr* expression);
-    BoundExpression* BindFunction(hsql::Expr* expression){return nullptr;}
+    BoundExpression* BindFunction(hsql::Expr* expression);
 
     BoundOperatorType BindBinaryOperator(hsql::OperatorType op);
     //BoundExpression* BindOperator(const hsql::Expr* expression);

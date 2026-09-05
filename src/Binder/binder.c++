@@ -419,6 +419,64 @@ JoinType Binder::BindJoinType(hsql::JoinType type){
 }
 
 
+BoundExpression* Binder::BindFunction(hsql::Expr* expression){
+
+    if(expression == nullptr){
+        return nullptr;
+    }
+
+    string function_name = expression->name;
+
+    //to upper case normalization
+    for(auto&c:function_name) {
+        c = toupper(c);
+    }
+
+    AggregateType aggregate_type;
+
+    //bound agg type bsed on it's name 
+    if(function_name == "COUNT"){
+        aggregate_type = COUNT;
+    }
+    else if(function_name == "SUM"){
+        aggregate_type = SUM;
+    }
+    else if(function_name == "AVG"){
+        aggregate_type = AVG;
+    }
+    else if(function_name == "MAX"){
+        aggregate_type = MAX;
+    }
+    else if(function_name == "MIN"){
+        aggregate_type = MIN;
+    }
+    else{
+        cerr<<"unsupported function:"<<function_name<<endl;
+        return nullptr;
+    }
+
+
+    // function argument, the first only that's what the executer support for now
+    hsql::Expr* argument_expr = (*expression->exprList)[0];
+
+    // bind the argument normally
+    BoundExpression* argument = BindExpression(argument_expr);
+    //check if null
+    if(argument == nullptr){
+        return nullptr;
+    }
+
+    BoundColumnRef* col = dynamic_cast<BoundColumnRef*>(argument);
+
+    // return type
+    FieldType return_type = col->return_type;
+
+    if(aggregate_type == COUNT ||aggregate_type == AVG){
+        return_type = TYPE_FLOAT;
+    }
+
+    return new BoundFunctionExpression(function_name, aggregate_type, col);
+}
 /*
 // binding join clause
 BoundJoinClause Binder::BindJoin(const hsql::JoinDefinition* join){
