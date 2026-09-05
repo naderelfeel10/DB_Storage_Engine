@@ -121,6 +121,36 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
         
             return new ExternalMergeSort(catalog->getBPM(), child, *sort_key, method);
         }
+        //agg functions
+        case PlanType::AGGREGATION:{
+            //prepare child executer
+            auto* group_by_plan = static_cast<GroupByPlan*>(plan);
+            AbstractExecuter* child = createExecutor(group_by_plan->getChild());
+
+            //sort_agg needs a vector of col indexes 
+            //also needs a vector of agg functions which is (function_type, col_index)
+
+            //loop through each item in gourping keys and get it's col_oid
+            vector<int>grouping_cols;
+            for(auto&item : group_by_plan->getGroupingKeys()){
+                BoundColumnRef* col_ref = dynamic_cast<BoundColumnRef*>(item);
+                grouping_cols.push_back(col_ref->column_oid);
+            }
+            
+            vector<GroupingFunction>grouping_functions;
+
+            for(auto& item:group_by_plan->getGroupingFunctions()){
+                //prepare the function adn the col it'c col parameter 
+                BoundFunctionExpression* func = dynamic_cast<BoundFunctionExpression*>(item);
+                BoundColumnRef* col =dynamic_cast<BoundColumnRef*>(func->argument);
+                
+                GroupingFunction grouping_func = GroupingFunction(func->function_type, col->column_oid);
+                grouping_functions.push_back(grouping_func);
+
+            
+            return new SortAggregateExecuter(this->catalog->getBPM(), grouping_cols, child);
+
+        }
         default:{
             throw runtime_error("invalid planType");
             return nullptr;
@@ -634,7 +664,9 @@ int main()
     //getline(cin, sql);
 
     //const string sql = "SELECT u.user_id, Orders.user_id, u.firstName from User u inner join Orders on u.user_id = Orders.user_id where u.user_id > 120;";
-    const string sql = "SELECT u.user_id,u.age from User u order by u.age DESC;";
+    //const string sql = "SELECT u.user_id,u.age from User u order by u.age DESC;";
+    const string sql = "SELECT u.user_id,AVG(u.age) from User u;";
+
 
 
     hsql::SQLParserResult result;
