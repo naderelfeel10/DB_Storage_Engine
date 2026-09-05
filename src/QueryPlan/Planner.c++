@@ -37,6 +37,22 @@ AbstractPlanNode* Planner::PlanSelect(BoundSelectStatement* statement){
         plan = new FilterPlan(statement->where, plan);
     }
 
+    // group by plan
+    if(!statement->group_by.empty()){
+        //prepare agg functions like avg, sum ...
+        vector<BoundExpression*>functions;
+
+        for(auto&item : statement->select_list){
+            BoundExpression* expr = item.expression;
+            if(expr->exp_type == BoundExpressionType::FUNCTION){
+                functions.push_back(expr);
+            }
+        }
+        
+        plan = new GroupByPlan(statement->group_by, functions,plan);
+    }
+
+
     if(!statement->order_by.empty()) {
         plan = new OrderByPlan(statement->order_by[0], plan);
     }

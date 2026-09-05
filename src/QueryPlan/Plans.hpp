@@ -2,6 +2,7 @@
 #define SEQ_SCAN_PLAN_NODE_H
 
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\QueryPlan\AbstractPlanNode.hpp"
+#include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Q_Execution\HashAggregateExecuter.h"
 
 using namespace std;
 
@@ -239,5 +240,86 @@ public:
 
     
 };
+
+
+//planning agg 
+class GroupByPlan : public AbstractPlanNode{
+
+private:
+    //group by needs a vector of keys to group on and vector of grouping functions 
+    vector<BoundExpression*> grouping_keys;
+    vector<BoundExpression*> grouping_functions;
+
+    AbstractPlanNode* child;
+
+public:
+
+    GroupByPlan(vector<BoundExpression*> grouping_keys,vector<BoundExpression*> grouping_functions,AbstractPlanNode* child):grouping_keys(grouping_keys),
+            grouping_functions(grouping_functions),child(child){
+        this->type = PlanType::AGGREGATION;
+    }
+
+    vector<BoundExpression*> getGroupingKeys(){
+        return grouping_keys;
+    }
+    
+    vector<BoundExpression*> getGroupingFunctions(){
+        return grouping_functions;
+    }
+
+    AbstractPlanNode* getChild(){
+        return child;
+    }
+    //just printing
+    void PrintTree(int indent = 0) const override {
+
+        PrintIndent(indent);
+
+        cout << "GROUP BY" << endl;
+
+        // Print grouping keys
+        if (!grouping_keys.empty()) {
+
+            PrintIndent(indent + 1);
+            cout << "Grouping Keys:" << endl;
+
+            for (auto* key : grouping_keys) {
+
+                if (key != nullptr) {
+                    key->PrintTree(
+                        "|   ",
+                        true
+                    );
+                }
+            }
+        }
+
+        // Print grouping functions
+        if (!grouping_functions.empty()) {
+
+            PrintIndent(indent + 1);
+            cout << "Grouping Functions:" << endl;
+
+            for (auto* func : grouping_functions) {
+
+                if (func != nullptr) {
+                    func->PrintTree(
+                        "|   ",
+                        true
+                    );
+                }
+            }
+        }
+
+        // Print child
+        PrintIndent(indent + 1);
+        cout << "Child:" << endl;
+
+        if (child != nullptr) {
+            child->PrintTree(indent + 2);
+        }
+    }
+};
+
 
 #endif
