@@ -104,6 +104,11 @@ BoundSelectStatement* Binder::BindSelect(const hsql::SelectStatement* statement)
             bound->group_by.push_back(BindExpression(expression));
         }
     }
+    //TODO
+    //check if projected cols are the same cols in group by
+    //check that where clause appears before group by
+    //check that having valuse appears after group by
+
     //HAVING
     if(statement->groupBy && statement->groupBy->having != nullptr){
         bound->having = BindExpression(statement->groupBy->having);
@@ -470,10 +475,6 @@ BoundExpression* Binder::BindFunction(hsql::Expr* expression){
 
     // return type
     FieldType return_type = col->return_type;
-
-    if(aggregate_type == COUNT ||aggregate_type == AVG){
-        return_type = TYPE_FLOAT;
-    }
 
     return new BoundFunctionExpression(function_name, aggregate_type, col);
 }

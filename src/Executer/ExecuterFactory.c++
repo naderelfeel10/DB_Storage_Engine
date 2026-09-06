@@ -39,37 +39,56 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
         }
 
 
-        //now the projection
         case PlanType::PROJECTION:{
-
+                
             auto* projection_plan = static_cast<ProjectionPlan*>(plan);
-        
+            
             //the child is also a child executer, so i will keep calling it recursevly 
             AbstractExecuter* child = createExecutor(projection_plan->child);
-            
-            //now construct projection cols to select
+                
             vector<string> projection_cols;
-            
+                
             //loop through all select items in the projection plan
             //projection only needs vector of col names, and the child executer
             for(const auto& item : projection_plan->expressions){
-                
-                //first fetch the col_ref
+            
+                //it might be col_ref, or agg function, so we have to consider both
+                //col ref
                 BoundColumnRef* column_ref = dynamic_cast<BoundColumnRef*>(item.expression);
-                
-                //check if null first
-                if(column_ref == nullptr){
-                    throw runtime_error("col ref is nullptr");
+                //if not null means it's col_ref
+                if(column_ref != nullptr){
+                    string col_name = column_ref->table_name+"."+column_ref->column_name;
+                    projection_cols.push_back(col_name);
+                    continue;
                 }
-                string col_name = column_ref->table_name+'.'+column_ref->column_name;
-                cout<<col_name<<endl;
-                //push col_name into the col_ref
-                projection_cols.push_back(col_name);
+            
+                // agg function:
+                BoundFunctionExpression* function = dynamic_cast<BoundFunctionExpression*>(item.expression);
+                //if not null means it's a function
+                if(function != nullptr){
+                    BoundColumnRef* argument = dynamic_cast<BoundColumnRef*>(function->argument);
+                
+                    if(argument == nullptr){
+                        throw runtime_error("agg argument is not a column");
+                    }
+                    //col_name like this AVG(salary)
+                    string col_name = function->function_name + "(" +argument->column_name + ")";
+
+                    cout<<col_name<<endl;
+                
+                    projection_cols.push_back(col_name);
+                    continue;
+                }
+            
+                throw runtime_error("unsupported projection expression");
             }
+
+            for(auto&col_name:projection_cols)cout<<col_name<<" ";
         
             //now return the operator
             return new Projection(child, projection_cols);
         }
+
 
         //select case
         case PlanType::FILTER:{
@@ -140,15 +159,26 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
             vector<GroupingFunction>grouping_functions;
 
             for(auto& item:group_by_plan->getGroupingFunctions()){
+
                 //prepare the function adn the col it'c col parameter 
                 BoundFunctionExpression* func = dynamic_cast<BoundFunctionExpression*>(item);
-                BoundColumnRef* col =dynamic_cast<BoundColumnRef*>(func->argument);
+                BoundColumnRef* col = dynamic_cast<BoundColumnRef*>(func->argument);
                 
-                GroupingFunction grouping_func = GroupingFunction(func->function_type, col->column_oid);
+                //prepare grouing funcion
+                GroupingFunction grouping_func;
+                grouping_func.grouping_type = func->function_type;
+                grouping_func.function_key = col->column_oid;
+
+                cout<<grouping_func.grouping_type<<" | "<<grouping_func.function_key<<endl;
+
                 grouping_functions.push_back(grouping_func);
 
+            }
+            //prepare having clause as a prediacte
+            AbstractPredicate* having_predicate = build_predicate(group_by_plan->getHaving(), child);
+            group_by_plan->getHaving()->PrintTree();
             
-            return new SortAggregateExecuter(this->catalog->getBPM(), grouping_cols, child);
+            return new SortAggregateExecuter(this->catalog->getBPM(),child, grouping_cols, grouping_functions,having_predicate);
 
         }
         default:{
@@ -166,6 +196,7 @@ AbstractPredicate* ExecutorFactory::build_predicate(BoundExpression* expression,
         return nullptr;
     }
 
+    expression->PrintTree();
     // this has to be binary expression
     if(expression->exp_type != BoundExpressionType::BINARY){
         throw runtime_error("predicate has to be binary");
@@ -218,7 +249,10 @@ AbstractPredicate* ExecutorFactory::build_predicate(BoundExpression* expression,
         case BoundOperatorType::GT:{
             //string col_name = dynamic_cast<BoundColumnRef*>(binary->left)->column_name;
             Column* left_col = expr_to_col(binary->left, child);
+            left_col->printCol();
+            
             Column* right_col = expr_to_col(binary->right, child);
+            right_col->printCol();
 
             return new Predicate(left_col, right_col, PredicateType::GT);
         }
@@ -227,7 +261,10 @@ AbstractPredicate* ExecutorFactory::build_predicate(BoundExpression* expression,
             //string col_name = dynamic_cast<BoundColumnRef*>(binary->left)->column_name;
             
             Column* left_col = expr_to_col(binary->left, child);
+            left_col->printCol();
+
             Column* right_col = expr_to_col(binary->right, child);
+            right_col->printCol();
 
             return new Predicate(left_col, right_col, PredicateType::GE);
         }
@@ -396,9 +433,35 @@ Column* ExecutorFactory::expr_to_col(BoundExpression* expr,AbstractExecuter* chi
             BoundConstantExpression* constant = static_cast<BoundConstantExpression*>(expr);
             //convert this concrete value into actual col
             Column* result = const_to_col(constant);
+            result->printCol();
 
             return result;
         }
+        //handle functions and aggregations like COUNT,SUM
+        case BoundExpressionType::FUNCTION: {
+
+            BoundFunctionExpression* function = static_cast<BoundFunctionExpression*>(expr);
+
+            cout<<function->function_name<<endl;
+            
+            string col_name;
+
+            if (function->argument != nullptr){
+                BoundColumnRef* col_ref = dynamic_cast<BoundColumnRef*>(function->argument);
+
+                col_name = function->function_name+"("+col_ref->column_name+")";
+            }
+
+            Column* res_col = new Column(function->return_type, col_name, sizeof(function->return_type));
+            res_col->printCol();
+            
+            return res_col;
+        }
+            
+    
+
+   
+
 
         default:
             throw runtime_error("invalid expression");
@@ -665,7 +728,9 @@ int main()
 
     //const string sql = "SELECT u.user_id, Orders.user_id, u.firstName from User u inner join Orders on u.user_id = Orders.user_id where u.user_id > 120;";
     //const string sql = "SELECT u.user_id,u.age from User u order by u.age DESC;";
-    const string sql = "SELECT u.user_id,AVG(u.age) from User u;";
+    //const string sql = "SELECT u.user_id, u.firstName, AVG(u.age), SUM(u.age) from User u group by u.user_id, u.firstName ;";
+    const string sql = "SELECT u.user_id, u.firstName, AVG(u.age), SUM(u.age)"
+            "from User u group by u.user_id, u.firstName having SUM(u.age)>70 AND AVG(u.age)>=30.1;";
 
 
 

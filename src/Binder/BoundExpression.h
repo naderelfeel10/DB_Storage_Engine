@@ -6,7 +6,7 @@
 //#include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Binder\Expression.h"
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Storage\Table\Column.h"
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\parser\external\sql-parser\src\sql\Expr.h"
-
+#include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Q_Execution\SortAggregateExecuter.h"
 #include<iostream>
 #include<vector>
 using namespace std;
@@ -277,9 +277,12 @@ public:
     BoundExpression* argument;
 
     BoundFunctionExpression(const string& function_name, AggregateType function_type, BoundExpression* argument)
-                            :function_name(function_name),argument(argument){
+                            :BoundExpression(BoundExpressionType::FUNCTION), function_name(function_name), 
+                            function_type(function_type),argument(argument){
 
-                        this->function_type = function_type;
+        this->function_type = function_type;
+        this->return_type = this->argument->return_type;
+
     }
 
 
