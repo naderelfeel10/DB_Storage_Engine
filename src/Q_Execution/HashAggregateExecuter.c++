@@ -54,11 +54,16 @@ void HashAggregateExecuter::close(){
 void HashAggregateExecuter::set_output_schema(){
     //output grouping vector + grouping functions   
     int size = this->grouping_keys.size();
+    string table_name = this->table->getTableHeap()->getTableName();
+    
     for(int i=0;i<size;i++){
         int col_index = grouping_keys[i];
         Column col = this->table->get_output_schema()[col_index];
+        string col_name = table_name+'.'+col.getColName();
+        col.setColName(col_name);
         this->output_schema.push_back(col);
     }
+
     size = this->grouping_functions.size();
     for(int i{0};i<size;i++){
         int col_index = grouping_functions[i].function_key;

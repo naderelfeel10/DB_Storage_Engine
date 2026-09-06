@@ -36,7 +36,7 @@ class Predicate:public AbstractPredicate{
         right_col(right_col),predicate_type(type){}
 
         bool checkPredicate();
-        bool evaluate(const Tuple* tuple, vector<Column> cols);  
+        bool evaluate(Tuple* tuple, vector<Column> cols);  
 
         Column* getcol(int col_index){
             if(col_index==0)return this->left_col;

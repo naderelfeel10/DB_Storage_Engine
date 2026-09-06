@@ -69,48 +69,212 @@ bool Predicate::checkPredicate(){
 }
     
 }
-
-
-bool Predicate::evaluate(const Tuple* tuple, vector<Column> cols) {
+bool Predicate::evaluate( Tuple* tuple, vector<Column> cols)
+{
     Field* active_left_field = nullptr;
     Field* active_right_field = nullptr;
 
-    
-    
-    for (size_t i = 0; i < cols.size(); ++i) {
-        //cout<<this->left_col->getColName()<<",,,,"<<cols[i].getColName()<<endl;
+    for (size_t i = 0; i < cols.size(); ++i)
+    {
+        // cout << this->left_col->getColName()
+        //      << ",,,," << cols[i].getColName() << endl;
 
-        if (this->left_col->getColName() == cols[i].getColName()) {
-            active_left_field = new Field(tuple->fields[i]); 
+        if (this->left_col->getColName() == cols[i].getColName())
+        {
+            active_left_field = new Field(tuple->fields[i]);
+            //active_left_field->print();
         }
-        //cout<<this->right_col->getColName()<<" ,,,, "<<cols[i].getColName()<<endl;
-        
-        if (this->right_col->getColName() == cols[i].getColName()) {
-            active_right_field = new Field(tuple->fields[i]); 
+
+        // cout << this->right_col->getColName()
+        //      << " ,,,, " << cols[i].getColName() << endl;
+
+        if (this->right_col->getColName() == cols[i].getColName())
+        {
+            active_right_field = new Field(tuple->fields[i]);
+            //active_left_field->print();
         }
     }
-    active_left_field = active_left_field?active_left_field:this->left_col->getField();
-    active_right_field = active_right_field?active_right_field:this->right_col->getField();
 
-    assert(active_left_field != nullptr && active_right_field != nullptr && "column names not found in row metadata!");
+    // If any col is const, its name contains "_const_"
+    if (left_col->getColName().find("const") != string::npos)
+    {
+        active_left_field = left_col->getField();
+    }
+
+    if (right_col->getColName().find("const") != string::npos)
+    {
+        active_right_field = right_col->getField();
+    }
+
+    active_left_field =
+        active_left_field ? active_left_field : this->left_col->getField();
+
+    active_right_field =
+        active_right_field ? active_right_field : this->right_col->getField();
+
+    assert(
+        active_left_field != nullptr &&
+        active_right_field != nullptr &&
+        "column names not found in row metadata!"
+    );
 
     string left_col_name = left_col->getColName();
     string right_col_name = right_col->getColName();
 
-    int left_col_size = left_col->getColSize();
-    int right_col_size = right_col->getColSize();
+    // int left_col_size = left_col->getColSize();
+    // int right_col_size = right_col->getColSize();
 
-    //delete left_col;
-    //delete right_col;
+    int left_col_size =
+        sizeof(active_left_field->getFieldType());
 
-    left_col = new Column(active_left_field, left_col_name, left_col_size);
-    right_col = new Column(active_right_field, right_col_name, right_col_size);
+    int right_col_size =
+        sizeof(active_right_field->getFieldType());
 
+    // delete left_col;
+    // delete right_col;
 
-    //return this->compareValues(active_left_field, active_right_field);
+    left_col = new Column(
+        active_left_field,
+        left_col_name,
+        left_col_size
+    );
+
+    right_col = new Column(
+        active_right_field,
+        right_col_name,
+        right_col_size
+    );
+
+    //left_col->printCol();
+    //right_col->printCol();
+
+    //left_col->getField()->print();
+    //right_col->getField()->print();
+
+    // return this->compareValues(
+    //     active_left_field,
+    //     active_right_field
+    // );
+
     return this->checkPredicate();
 }
 
+/*
+bool Predicate::evaluate(Tuple* tuple,  vector<Column> cols)
+{
+    //tuple->print();
+    Field* active_left_field = nullptr;
+    Field* active_right_field = nullptr;
+
+    // =========================
+    // LEFT OPERAND
+    // =========================
+
+    if (left_col->getColName().find("_const_") != string::npos)
+    {
+        active_left_field = left_col->getField();
+    }
+    else
+    {
+        for (size_t i = 0; i < cols.size(); ++i)
+        {
+            if (left_col->getColName() == cols[i].getColName())
+            {
+                active_left_field = new Field(tuple->fields[i]);
+                break;
+            }
+        }
+    }
+
+    // =========================
+    // RIGHT OPERAND
+    // =========================
+
+    if (right_col->getColName().find("_const_") != string::npos)
+    {
+        active_right_field = right_col->getField();
+    }
+    else
+    {
+        for (size_t i = 0; i < cols.size(); ++i)
+        {
+            if (right_col->getColName() == cols[i].getColName())
+            {
+                active_right_field = &tuple->fields[i];
+                break;
+            }
+        }
+    }
+
+    // =========================
+    // VALIDATION
+    // =========================
+
+    if (active_left_field == nullptr)
+    {
+        throw runtime_error(
+            "Left column not found: " +
+            left_col->getColName()
+        );
+    }
+
+    if (active_right_field == nullptr)
+    {
+        throw runtime_error(
+            "Right column not found: " +
+            right_col->getColName()
+        );
+    }
+
+    //cout << "LEFT: ";
+    //active_left_field->print();
+
+    //cout << "RIGHT: ";
+    //active_right_field->print();
+
+    // =========================
+    // COMPARE DIRECTLY
+    // =========================
+
+    FieldType left_type = active_left_field->getFieldType();
+    FieldType right_type = active_right_field->getFieldType();
+
+    if (left_type != right_type)
+    {
+        throw runtime_error("Predicate type mismatch");
+    }
+
+    switch (left_type)
+    {
+        case TYPE_INT:
+            return compareValues(
+                active_left_field->getFieldValueInt(),
+                active_right_field->getFieldValueInt()
+            );
+
+        case TYPE_FLOAT:
+            return compareValues(
+                active_left_field->getFieldValueFloat(),
+                active_right_field->getFieldValueFloat()
+            );
+
+        case TYPE_BOOL:
+            return compareValues(
+                active_left_field->getFieldValueBool(),
+                active_right_field->getFieldValueBool()
+            );
+
+        case TYPE_STRING:
+            return compareValues(
+                active_left_field->getFieldValueStr(),
+                active_right_field->getFieldValueStr()
+            );
+
+        default:
+            throw runtime_error("Unsupported field type");
+    }
+}
+*/
 
 /*
 int 

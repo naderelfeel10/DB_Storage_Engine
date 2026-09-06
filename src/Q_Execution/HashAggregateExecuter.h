@@ -18,9 +18,11 @@
 #include"select_operator.h"
 #include"Projection_operator.h"
 #include"ExternalMergeSortExecuter.h"
+#include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Q_Execution\SortAggregateExecuter.h"
 
 using namespace std;
 
+/*
 enum AggregateType {COUNT, SUM, AVG, MAX, MIN};
 
 struct AggValues{
@@ -33,7 +35,7 @@ struct GroupingFunction{
     AggregateType grouping_type;
     int function_key;
 };
-
+*/
 class HashAggregateExecuter: public AbstractExecuter{
     
     private:

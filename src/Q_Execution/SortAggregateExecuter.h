@@ -33,6 +33,7 @@ struct GroupingFunction{
     int function_key;
 };
 
+
 class SortAggregateExecuter: public AbstractExecuter{
     
     private:
@@ -51,11 +52,15 @@ class SortAggregateExecuter: public AbstractExecuter{
         vector<Field> curr_grouping_fields;
         vector<AggValues> agg_state;
 
+        //added having
+        AbstractPredicate* having{nullptr};
+
 
     public:
-        SortAggregateExecuter(BufferPoolManager* BPM, AbstractExecuter*table, vector<int> grouping_keys, vector<GroupingFunction> grouping_functions ):
-            BPM(BPM),table(table), grouping_keys(grouping_keys), grouping_functions(grouping_functions){
+        SortAggregateExecuter(BufferPoolManager* BPM, AbstractExecuter*table, vector<int> grouping_keys, vector<GroupingFunction> grouping_functions, AbstractPredicate*having):
+            BPM(BPM),table(table), grouping_keys(grouping_keys), grouping_functions(grouping_functions),having(having){
                 agg_state.assign(grouping_functions.size(), AggValues{});
+                this->open();
             };
 
         void open();

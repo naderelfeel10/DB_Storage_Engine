@@ -23,12 +23,17 @@ void SortAggregateExecuter::close(){
 
 void SortAggregateExecuter::set_output_schema(){
     //output grouping vector + grouping functions   
+    this->output_schema.clear();
     int size = this->grouping_keys.size();
+    string table_name = this->table->getTableHeap()->getTableName();
     for(int i=0;i<size;i++){
         int col_index = grouping_keys[i];
         Column col = this->table->get_output_schema()[col_index];
+        string col_name = table_name+'.'+col.getColName();
+        col.setColName(col_name);
         this->output_schema.push_back(col);
     }
+
     size = this->grouping_functions.size();
     for(int i{0};i<size;i++){
         int col_index = grouping_functions[i].function_key;
@@ -36,8 +41,11 @@ void SortAggregateExecuter::set_output_schema(){
 
         string function_name = get_function_string(grouping_functions[i]);
         col.setColName(function_name+'('+col.getColName()+')');
+        cout<<col.getColName()<<endl;
         this->output_schema.push_back(col);
     }
+
+    //for(auto&col:this->output_schema)col.printCol();
 }
 
 
@@ -136,16 +144,32 @@ Tuple SortAggregateExecuter::get_output_tuple(){
     int size =this->grouping_functions.size();
     for(int i{0};i<size;i++){
         AggregateType type = this->grouping_functions[i].grouping_type;
+
+        Column g_col = this->output_schema[this->grouping_functions[i].function_key];
+        //g_col.printCol();
+        FieldType field_type = g_col.getColType();
+
         Field f;
         double value;
         switch (type)
         {
         case SUM:
         case MIN:
-        case MAX:
+        case MAX:{
             value = this->agg_state[i].value;
-            f = Field(TYPE_FLOAT, value);
+            
+            if(field_type == TYPE_INT){
+                f = Field(TYPE_INT, static_cast<int>(value));
+            }
+            else if(field_type==TYPE_FLOAT){
+                f = Field(TYPE_FLOAT, value);
+            }
+            else if(field_type == TYPE_BOOL){
+                f = Field(TYPE_BOOL, static_cast<bool>(value));
+            }
+        
             break;
+        }
         case AVG:
             //cout<<this->agg_state[i].value<<" "<<this->agg_state[i].counter*1.0<<endl;
             value = ((this->agg_state[i].value)/(this->agg_state[i].counter*1.0));
@@ -154,16 +178,22 @@ Tuple SortAggregateExecuter::get_output_tuple(){
             break;
         case COUNT:
             value =(this->agg_state[i].counter);
-            f = Field(TYPE_FLOAT, value);
+            f = Field(TYPE_INT, value);
             break;       
         default:
             break;
         }
         functions_fields.push_back(f);
     }
-    this->curr_grouping_fields.insert(curr_grouping_fields.end(), functions_fields.begin(), functions_fields.end());
+    vector<Field>tmp_grouping_fields = this->curr_grouping_fields;
 
-    return Tuple(curr_grouping_fields);
+    tmp_grouping_fields.insert(tmp_grouping_fields.end(), functions_fields.begin(), functions_fields.end());
+
+    Tuple res = Tuple(tmp_grouping_fields);
+
+    //cout << "tuple:" << endl;
+    //res.print();
+    return res;
 }
 
 
@@ -177,6 +207,7 @@ bool SortAggregateExecuter::is_same_group(){
     return true;
 }
 //////
+/*
 bool SortAggregateExecuter::getNext(Tuple* tuple){
     // check if it still have data
     if(!has_tuple){
@@ -192,27 +223,107 @@ bool SortAggregateExecuter::getNext(Tuple* tuple){
 
     agg_state.assign(grouping_functions.size(), AggValues{});
     this->curr_grouping_fields = this->get_grouping_fields(this->next_tuple);
+    
     while(this->has_tuple){
-        //update the result, the fetch the next tupe
-        update_aggregate();
-        this->has_tuple = this->sorted_table->getNext(&this->next_tuple);
-        //if EOF
-        if(!has_tuple){
-            *tuple = this->get_output_tuple();
-            return true;
+
+        agg_state.assign(grouping_functions.size(), AggValues{});
+        curr_grouping_fields = get_grouping_fields(next_tuple);
+
+        while(this->has_tuple){
+            //update the result, the fetch the next tupe
+            update_aggregate();
+            this->has_tuple = this->sorted_table->getNext(&this->next_tuple);
+            //if EOF
+            if(!has_tuple){
+                // *tuple = this->get_output_tuple();
+                //return true;
+
+                //handle having
+                Tuple* result = new Tuple(this->get_output_tuple());
+                //result->print();
+                if(having == nullptr || having->evaluate(result,this->output_schema)){
+                    *tuple = *result;
+                    return true;
+                }
+
+            }
+            // if same group
+            else if(is_same_group()){
+                continue;
+            }
+            //if diff group
+            else {
+
+                // *tuple = this->get_output_tuple();
+                //agg_state.assign(grouping_functions.size(), AggValues{});
+                //return true;
+                
+
+                //handle having
+                Tuple* result = new Tuple(this->get_output_tuple());
+                //result->print();
+                //for(auto&col:this->output_schema)col.printCol();
+                //cout<<"////"<<endl;
+                //for(auto&col:this->table->get_output_schema())col.printCol();
+                if(having == nullptr || having->evaluate(result, this->output_schema)){
+                    *tuple = *result;
+                    return true;
+                }
+            }
+
         }
-        // if same group
-        else if(is_same_group()){
-            continue;
+    }
+        return false;
+}
+*/
+// getNext rewrite to solve having issues 
+bool SortAggregateExecuter::getNext(Tuple* tuple)
+{
+    if (!has_tuple)
+        return false;
+
+    while(has_tuple){
+
+        //we have to reset the agg_state before consuming new group
+        agg_state.assign(grouping_functions.size(),AggValues{});
+
+        curr_grouping_fields = get_grouping_fields(next_tuple);
+
+        //fetch all data from one group and update it's agg state
+        while(has_tuple){
+            update_aggregate();
+
+            //fetch from sorted table
+            has_tuple = sorted_table->getNext(&next_tuple);
+
+            //table is done
+            if (!has_tuple)
+                break;
+
+            //if diff group, then break
+            if (!is_same_group())
+                break;
         }
-        //if diff group
-        else{
-            *tuple = this->get_output_tuple();
-            agg_state.assign(grouping_functions.size(), AggValues{});
+
+        //the group is compele here
+        //so get the outputt tuple with the updated agg state then check againest having condition
+        Tuple result = get_output_tuple();
+
+        //result.print();
+
+        //evaluate having and return the tuple if true
+
+        if (having == nullptr || having->evaluate(&result, output_schema)){
+            *tuple = result;
             return true;
         }
 
+        // having is false 
+        // next_tuple is already the first tuple in the next group
+        if (!has_tuple)
+            return false;
     }
+
     return false;
 }
 

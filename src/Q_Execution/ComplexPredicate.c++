@@ -25,7 +25,7 @@ bool ComplexPredicate::checkcomplexPredicate(){
 
 }
 */
-bool ComplexPredicate::evaluate(const Tuple* tuple, vector<Column> cols){
+bool ComplexPredicate::evaluate( Tuple* tuple, vector<Column> cols){
     switch (c_predicate_type)
     {
     case ComplexPredicateType::AND :{

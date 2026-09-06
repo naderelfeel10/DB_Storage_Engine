@@ -13,7 +13,7 @@
 class AbstractPredicate {
     public:
     virtual ~AbstractPredicate() = default;
-    virtual bool evaluate(const Tuple* tuple,  std::vector<Column> cols) = 0;
+    virtual bool evaluate(Tuple* tuple,  std::vector<Column> cols) = 0;
 };
 
 #endif

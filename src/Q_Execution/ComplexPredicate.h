@@ -31,7 +31,7 @@ class ComplexPredicate:public AbstractPredicate{
         right_predicate(right_predicate),c_predicate_type(type){}
 
         bool checkcomplexPredicate();
-        bool evaluate(const Tuple* tuple, vector<Column> cols);
+        bool evaluate(Tuple* tuple, vector<Column> cols);
 
         AbstractPredicate* getpred(int pred_index){
             if(pred_index==0)return this->left_predicate;
