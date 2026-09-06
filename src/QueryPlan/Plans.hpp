@@ -249,13 +249,16 @@ private:
     //group by needs a vector of keys to group on and vector of grouping functions 
     vector<BoundExpression*> grouping_keys;
     vector<BoundExpression*> grouping_functions;
+    BoundExpression* having;
 
     AbstractPlanNode* child;
 
 public:
 
-    GroupByPlan(vector<BoundExpression*> grouping_keys,vector<BoundExpression*> grouping_functions,AbstractPlanNode* child):grouping_keys(grouping_keys),
-            grouping_functions(grouping_functions),child(child){
+    GroupByPlan(vector<BoundExpression*> grouping_keys,vector<BoundExpression*> grouping_functions,
+                AbstractPlanNode* child, BoundExpression*having) : grouping_keys(grouping_keys),
+
+            grouping_functions(grouping_functions),child(child),having(having){
         this->type = PlanType::AGGREGATION;
     }
 
@@ -269,6 +272,9 @@ public:
 
     AbstractPlanNode* getChild(){
         return child;
+    }
+    BoundExpression* getHaving(){
+        return this->having;
     }
     //just printing
     void PrintTree(int indent = 0) const override {

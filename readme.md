@@ -1,87 +1,197 @@
 # Database Engine
 
-A disk-based relational database engine implemented in modern C++, designed to simulate the internal architecture of real-world DBMS systems like PostgreSQL. The engine implements core database components including a Query Executer, Disk Manager, Buffer Pool Manager with LRU replacement, slotted-page storage, persistent table heaps, and tuple serialization. It supports CRUD operations, sequential scans, hash indexing for O(1) lookups, B+ Tree indexing for efficient O(log n) queries and range scans, and external merge sort for sorting datasets that exceed available memory. All tables, metadata, and indexes are fully persistent on disk and can be reconstructed after restarting the system. The project demonstrates how modern databases optimize storage, minimize disk I/O, and accelerate query execution through caching and indexing techniques. Built from scratch — no third-party database libraries.
+A production-quality, disk-based relational database engine implemented in modern C++, designed to simulate the internal architecture of real-world DBMS systems like PostgreSQL and MySQL. The engine implements a **complete SQL compilation pipeline**, from parsing through semantic analysis to query planning and physical execution.
+
+## 🏗️ Architecture: From SQL String to Result Set
+
+### High-Level Query Flow
+
+```
+SQL String
+    ↓
+┌─────────────────────────────────────────┐
+│           Parser (AST Generation)       │  Parse: "SELECT ... FROM ... WHERE ..."
+└────────────────┬────────────────────────┘
+                 ↓
+┌─────────────────────────────────────────┐
+│    Binder (Semantic Analysis)           │  Bind columns, tables, functions to catalog
+│  BindContext + Catalog Lookup           │
+└────────────────┬────────────────────────┘
+                 ↓
+┌─────────────────────────────────────────┐
+│    Planner (Logical Plan)               │  Build query tree: SeqScan → Filter → Join
+└────────────────┬────────────────────────┘
+                 ↓
+┌─────────────────────────────────────────┐
+│   ExecutorFactory (Physical Plan)       │  Create operators: predicate builders, joins
+└────────────────┬────────────────────────┘
+                 ↓
+┌─────────────────────────────────────────┐
+│        Query Execution Engine           │  Volcano-style iterator model
+│  Operators: SeqScan, Filter, Join, etc. │
+└────────────────┬────────────────────────┘
+                 ↓
+┌─────────────────────────────────────────┐
+│           Storage Layer                 │  TableHeap, IndexLookup, Buffer Pool
+│   Buffer Pool → Disk Manager            │
+└─────────────────────────────────────────┘
+```
 
 ---
 
-## Features at a Glance
+## 🔧 Core Features
 
 | Feature | Details |
-|---|---|
-| **Storage** | Slotted-page layout, 4KB pages, disk-backed |
-| **Buffer Management** | LRU replacement policy, configurable pool size |
-| **Indexing** | Static Hash Index `O(1)` + B+ Tree Index `O(log n)` |
-| **Query Execution** | Volcano-style iterator model for (seq scan, select, project) |
+|---------|---------|
+| **SQL Parsing** | AST-based parser; supports SELECT, WHERE, JOIN, GROUP BY, HAVING, ORDER BY |
+| **Semantic Analysis** | Binder validates column references, table aliases, function signatures |
+| **Catalog** | Persistent schema metadata; tables, columns, data types |
+| **Query Planning** | Transforms bound statements into logical execution plans |
+| **Storage** | Slotted-page layout, 4KB pages, disk-backed persistence |
+| **Buffer Management** | LRU replacement policy, configurable pool size, dirty-page tracking |
+| **Indexing** | Static Hash Index O(1) + B+ Tree Index O(log n) with range scans |
+| **Query Execution** | Volcano-style iterator model for composable operators |
 | **Join Algorithms** | Nested Loop, Indexed Nested Loop, Hash Join, Merge-Sort Join |
-| **Sorting** | External Merge Sort - sorts datasets larger than memory |
-| **Aggregation** | Sort and Hashed based aggregation - groups table rows into one representitive row |
-| **Persistence** | Full crash recovery - tables, indexes, metadata survive restarts |
+| **Sorting** | External Merge Sort — sorts datasets larger than memory |
+| **Aggregation** | Sort and Hashed based aggregation with GROUP BY / HAVING support |
+| **Persistence** | Full crash recovery — tables, indexes, metadata survive restarts |
 
 ---
 
-## 🏗️ System Architecture
+## 📐 System Architecture
+
+### Compilation Pipeline Components
+
+### 1. [Parser](https://github.com/naderelfeel10/Database_Engine/tree/main/parser) (External + Integration)
+- **Input**: Raw SQL string
+- **Output**: Abstract Syntax Tree (AST)
+- **Forked** a production-grade SQL parser; handles statement types, expressions, clauses
+
+### 2. [Binder](https://github.com/naderelfeel10/Database_Engine/tree/main/src/Binder)
+**Semantic analysis layer** — validates that parsed SQL refers to real objects.
+
+**Key responsibilities:**
+- Resolve column names → (table_oid, column_id)
+- Validate table references and aliases
+- Type-check operators and function arguments
+- Build `BoundExpression` tree (typed, resolved AST)
+
+### 3. [Catalog](https://github.com/naderelfeel10/Database_Engine/tree/main/src/Catalog)
+**Schema metadata registry** — persistent storage of table/column definitions.
+
+- Tables: schema, column names, types
+- Indexes: index_id → (table_oid, key_column)
+- Data types: int, float, string, date, etc.
+
+### 4. [Planner](https://github.com/naderelfeel10/Database_Engine/tree/main/src/QueryPlan)
+**Logical query plan generator** — builds operator tree from bound statement.
+
+**Plan node types:**
+- `SeqScanPlan` → sequential scan of table
+- `FilterPlan` → WHERE clause predicates
+- `ProjectionPlan` → SELECT column list
+- `JoinPlan` → INNER, LEFT, RIGHT joins
+- `OrderByPlan` → ORDER BY sort key + direction
+- `GroupByPlan` → GROUP BY keys + aggregate functions + HAVING
+
+**Example plan tree for a complex query:**
 
 ```
-┌──────────────────────────────────────────────────┐
-│              Query Execution Engine               │
-│   SeqScan │ Select │ Project │ Join │ ExMergeSort |
-|            | Aggregation                          |
-└────────────────────┬─────────────────────────────┘
-                     │
-┌────────────────────▼─────────────────────────────┐
-│                  TableHeap                        │
-│         (Table-level CRUD + Iterators)            │
-└────────────────────┬─────────────────────────────┘
-                     │
-┌────────────────────▼─────────────────────────────┐
-│             Buffer Pool Manager                   │
-│           (LRU Replacement Policy)                │
-└────────────────────┬─────────────────────────────┘
-                     │
-┌────────────────────▼─────────────────────────────┐
-│               Disk Manager                        │
-│     (Page I/O, Metadata, Directory Entries)       │
-└──────────────────────────────────────────────────┘
+         PROJECTION [u.user_id, u.firstName, AVG(u.age), SUM(u.age)]
+              ↑
+         GROUP BY [u.user_id, u.firstName]
+              ↑
+           HAVING [SUM(u.age) > 70 AND AVG(u.age) >= 30.1]
+              ↑
+            FILTER [u.age > 18]
+              ↑
+            JOIN [INNER] [u.user_id = Orders.user_id]
+            /          \
+       SEQ_SCAN      SEQ_SCAN
+         [User]      [Orders]
 ```
-##  Project Structure
+
+### 5. [ExecutorFactory](https://github.com/naderelfeel10/Database_Engine/tree/main/src/Executer)
+**Physical operator instantiation** — converts logical plan to executable iterators.
+
+
+**Responsibilities:**
+- Allocate executor instances from plan nodes
+- Build predicate evaluators from expressions
+- Map bound columns to physical Column objects
+- Wire child→parent iterator chains
+
+---
+
+## 📁 Project Structure
 
 ```
-├── src/
-│   ├── Buffer/
-│   │   ├── BufferPoolManager.c++
-│   │   └── LRU_replacement.c++
-│   ├── Storage/
-│   │   ├── Disk/
-│   │   │   └── DiskManager.c++
-│   │   ├── Page/
-│   │   │   ├── Field.c++
-│   │   │   ├── page.c++
-│   │   │   └── Tuple.c++
-│   │   ├── Table/
-│   │   │   ├── TableHeap.c++
-│   │   │   ├── TableIterator.c++
-│   │   │   ├── Column.c++
-│   │   │   └── RID.c++
-│   │   └── Indexing/
-│   │       ├── static_hash_index.c++
-│   │       ├── StaticHashIndexWrapper.c++
-│   │       ├── BPlusTreeIndex.c++
-│   │       └── BPlusTreeIndexWrapper.c++
-│   └── Q_Execution/
-│       ├── AbstractPredicate.h
-│       ├── ComplexPredicate.cpp
-│       ├── HashAggregateExecuter.cpp
-│       ├── SortAggregateExecuter.cpp
-│       ├── ExternalMergeSortExecuter.cpp
-│       ├── MergeJoinExecuter.cpp
-│       ├── hash_join.cpp
-│       ├── IndexedNested_loop_join.cpp
-│       ├── Nested_loop_join.cpp
-│       ├── Predicate.cpp
-│       ├── Projection_operator.cpp
-│       ├── select_operator.cpp
-│       ├── seq_scan_operator.cpp
+src/
+├── Binder/
+│   ├── Binder.h / Binder.c++
+│   ├── BoundStatement.h
+│   ├── BoundExpression.h
+│   ├── BoundSelectStatement.h
+│   ├── BindContext.h
+│   └── BoundSelectItem.h
+│
+├── Catalog/
+│   ├── Catalog.h / Catalog.c++
+│   └── catalog.db                    (persistent schema)
+│
+├── QueryPlan/
+│   ├── AbstractPlanNode.hpp
+│   ├── PlanNodes.hpp                 (SeqScan, Filter, Join, GroupBy, OrderBy, Projection)
+│   ├── Planner.h / Planner.c++
+│   └── PlanType.h
+│
+├── Q_Execution/
+│   ├── ExecutorFactory.h / ExecutorFactory.c++
+│   ├── AbstractExecuter.h
+│   ├── Operators/
+│   │   ├── seq_scan_operator.c++
+│   │   ├── select_operator.c++
+│   │   ├── Projection_operator.c++
+│   │   ├── Nested_loop_join.c++
+│   │   ├── IndexedNested_loop_join.c++
+│   │   ├── hash_join.c++
+│   │   ├── MergeJoinExecuter.c++
+│   │   ├── HashAggregateExecuter.c++
+│   │   ├── SortAggregateExecuter.c++
+│   │   └── ExternalMergeSortExecuter.c++
+│   ├── Predicates/
+│   │   ├── AbstractPredicate.h
+│   │   ├── Predicate.c++
+│   │   └── ComplexPredicate.c++
+│   └── Column.h                      (physical column abstraction)
+│
+├── Buffer/
+│   ├── BufferPoolManager.c++
+│   └── LRU_replacement.c++
+│
+├── Storage/
+│   ├── Disk/
+│   │   └── DiskManager.c++
+│   ├── Page/
+│   │   ├── Field.c++
+│   │   ├── page.c++
+│   │   └── Tuple.c++
+│   ├── Table/
+│   │   ├── TableHeap.c++
+│   │   ├── TableIterator.c++
+│   │   ├── Column.c++
+│   │   └── RID.c++
+│   └── Indexing/
+│       ├── static_hash_index.c++
+│       ├── StaticHashIndexWrapper.c++
+│       ├── BPlusTreeIndex.c++
+│       └── BPlusTreeIndexWrapper.c++
+│
+├── parser/
+│   └── external/sql-parser/         (forked parser submodule)
+│
 └── test/
+    ├── integration_tests.c++
     ├── test_multiple_tables.c++
     ├── test_loading_DB.c++
     └── test_table_load_store.c++
@@ -89,259 +199,179 @@ A disk-based relational database engine implemented in modern C++, designed to s
 
 ---
 
-##  Component Breakdown
+## 🔄 End-to-End Query Execution Example
 
-### 1.  Disk Manager [`src/Storage/Disk`](src/Storage/Disk)
-
-Handles all persistent I/O against the database file.
-
-- Manages database header (`DBHeader`) and page directory (`DirectoryEntry`)
-- Maps `page_id → file offset` for random-access reads/writes
-- Allocates and reclaims disk pages
-
+**Query:**
+```sql
+SELECT u.user_id, u.firstName, AVG(u.age) 
+FROM User u 
+WHERE u.age > 18 
+GROUP BY u.user_id, u.firstName
 ```
-writePage(page_id, data)   readPage(page_id, data)
-allocatePage()             deletePage(page_id)
-saveMetaData()             loadMetaData()
+
+**Step 1: Parse**
 ```
+Parser generates AST with SelectStatement, FromClause (Table u), WhereClause, GroupByClause
+```
+
+**Step 2: Bind**
+```
+Binder::BindSelect()
+  ├─ BindFrom(FromClause)
+  │   └─ Resolve "User u" → table_oid=1, alias "u"
+  ├─ BindOrderBy() / BindLimitOffset()
+  ├─ BindWhere()
+  │   └─ BindExpression(u.age > 18)
+  │       ├─ BindColumnRef(u.age) → (table_oid=1, col_id=2, type=INT)
+  │       ├─ BindOperator(>)
+  │       └─ BindIntegerLiteral(18)
+  └─ BindGroupBy()
+      └─ Resolve group keys + aggregation functions
+```
+
+**Output:** `BoundSelectStatement` with resolved column references, validated function signatures.
+
+**Step 3: Plan**
+```
+Planner::PlanSelect()
+  └─ Creates plan tree:
+       ProjectionPlan([u.user_id, u.firstName, AVG(u.age)])
+         ↑
+       GroupByPlan([u.user_id, u.firstName], [AVG(u.age)])
+         ↑
+       FilterPlan(u.age > 18)
+         ↑
+       SeqScanPlan(table_oid=1)
+```
+
+**Step 4: Execute**
+```
+ExecutorFactory::createExecutor(plan)
+  ├─ Creates SeqScanExecutor(TableHeap, table_oid=1)
+  ├─ Creates FilterExecutor(child=SeqScanExecutor, predicate=Predicate(age > 18))
+  ├─ Creates GroupByExecutor(
+  │    child=FilterExecutor,
+  │    grouping_keys=[user_id, firstName],
+  │    aggregates=[AVG(age)]
+  │  )
+  └─ Creates ProjectionExecutor(child=GroupByExecutor, columns=[user_id, firstName, AVG(age)])
+
+QueryExecutor::execute()
+  └─ Call ProjectionExecutor.open() → getNext() × N → close()
+```
+
+**Result:** Tuples streamed via Volcano iterator model; no intermediate materialization.
 
 ---
 
-### 2.  Buffer Pool Manager [`src/Buffer`](src/Buffer)
+## 🎯 Storage Layer (Unchanged, Integrated)
 
-Keeps hot pages in memory to minimize disk I/O.
+The **Query Execution Engine** sits atop the existing storage layer:
 
-- Fixed pool of in-memory frames with pin-count tracking
-- **LRU eviction** flushes dirty pages automatically on eviction
-- Thread-safe dirty-page writeback
+### Disk Manager
+- Persistent I/O against `.db` file
+- Random-access page reads/writes
+- Metadata & directory tracking
 
-```
-fetchPage(page_id)         newPage()
-unpinPage(page_id, dirty)  deletePage(page_id)
-markAsDirty(page_id)
-```
+### Buffer Pool Manager
+- In-memory frame cache (configurable size)
+- LRU eviction with dirty-page flush
+- Pin-count tracking for safe concurrency
 
----
+### Page & Tuple
+- **Slotted page layout** — 4 KB blocks with header, slot array, tuple data
+- **Tuple** — row; serializes Field list to/from bytes
+- **Field** — typed column value (int, float, string) with serialization
 
-### 3.  Page & Tuple [`src/Storage/Page`](src/Storage/Page)
+### Table Layer
+- **TableHeap** — CRUD and RID assignment (page_id + slot_num)
+- **TableIterator** — Volcano-style full scan
+- Persistent table metadata (schema, page chain, tuple count)
 
-Defines the physical layout of a 4 KB storage block.
-
-**Slotted Page Structure**
-
-```
-┌─────────────────────────────────────────┐
-│  PageHeader (id, next_page, count, fsp) │
-├─────────────────────────────────────────┤
-│  Slot Array  →                          │
-├─────────────────────────────────────────┤
-│                  ← Tuple Data           │
-└─────────────────────────────────────────┘
-```
-
-- **Tuple** — a row; serializes a list of `Field` objects to/from raw bytes
-- **Field** — a single typed column value (`int`, `string`, …) with serialization support
+### Indexing
+- **Static Hash Index** — O(1) average, auto-rehash at 75% load
+- **B+ Tree Index** — O(log n) + range scans, persistent across restarts
 
 ---
 
-### 4.  Table Layer [`src/Storage/Table`](src/Storage/Table)
+## 📊 Query Execution Operators
 
-High-level API over a chain of pages.
+All implement the **Volcano iterator model** (`open() → getNext() → close()`):
 
-**TableHeap** provides CRUD and returns Record IDs (`RID = page_id + slot_num`):
-
-```
-insertTuple(tuple) → RID    getTuple(rid)
-updateTuple(rid, tuple)     deleteTuple(rid)
-```
-
-**TableIterator** drives full sequential scans:
-
-```cpp
-for (auto it = table.begin(); it != table.end(); ++it) {
-    Tuple t = *it;
-}
-```
+| Operator | Complexity | Use Case |
+|----------|-----------|----------|
+| **Sequential Scan** | O(N) | Full table scan; no index |
+| **Selection (Filter)** | O(N) | WHERE clause evaluation |
+| **Projection** | O(N) | SELECT column list |
+| **Nested Loop Join** | O(N×M) | Small tables; any join condition |
+| **Indexed Nested Loop Join** | O(N × log M) | Index exists on inner table |
+| **Hash Join** | O(N+M) average | Large equi-joins; build hash table |
+| **Merge Join** | O((N+M) log(N+M)) | Pre-sorted or ORDER BY input |
+| **Hash Aggregation** | O(N) | GROUP BY (fits in memory) |
+| **Sort Aggregation** | O(N log N) | GROUP BY (large datasets) |
+| **External Merge Sort** | O(N log N + 2N×log B(N/B)) I/O | ORDER BY (larger than memory) |
 
 ---
 
-### 5.  Indexing [`src/Storage/Indexing`](src/Storage/Indexing)
+## 🧪 Benchmarks (Disk-Based Joins)
 
-#### Static Hash Index — `O(1)` average lookup
+**Test Setup:**
+- Users table: 10,000 rows
+- Orders table: 1,000,000 rows
+- Equi-join on `user_id`; high skew (1,000 orders per user)
+- Buffer pool: 100 frames
 
-- Chained-bucket hash table persisted across pages
-- **Auto-rehash** at 75 % load factor (doubles capacity)
-- Full serialization to disk (`serializeHashIndex` / `deserializeHashIndex`)
-
-#### B+ Tree Index — `O(log n)` lookup + range scans
-
-- Classic leaf-linked B+ Tree, every node stored on its own disk page
-- Supports equality and range predicates
-- Tree persisted with `saveBPlusTree()` / `loadBPlusTree()`
-
----
-
-### 6.  Query Execution Engine [`src/Q_Execution`](src/Q_Execution)
-
-Volcano-style pull model — each operator exposes `open / getNext / close`.
-
-| Operator | Description | Example |
-|---|---|---|
-| **Sequential Scan** | Full table scan | `SELECT * FROM User` |
-| **Selection** | WHERE predicates (`=`, `>`, `<`, `>=`, `<=`, `AND`, `OR`) | `WHERE user_id > 102 AND user_id <= 107` |
-| **Projection** | Column filtering | `SELECT user_id, firstName FROM ...` |
-| **Nested Loop Join** | Pairwise scan `O(N×M)` | `JOIN Order ON User.user_id = Order.user_id` |
-| **Indexed Nested Loop Join** | Uses Hash/B+ Tree on inner table `O(N × lookup)` | Same join, index-assisted |
-| **Hash Join** | Build + probe `O(N+M)` average | Equality joins on large relations |
-| **Merge Join** | Build + probe `4*(N+M)` average | equal join on 2 sorted tables |
----
-
-##  Join Algorithm Benchmarks
-Join Algorithm Comparison
-
-Benchmarks and analysis of four classic join algorithms implemented from scratch in a custom C++ database engine with a Buffer Pool Manager.
-## Test Setup:
-```
-Users: 10,000 rows
-Orders: 1,000,000 rows
-Join: equi-join on user_id
-Skew: high — 1,000 orders per user (user_id = 100 + (i % 1000))
-Buffer Pool: 100 frames
-```
-
-## Join Algorithms Benchmark
-
-The following benchmark compares the execution time of different join algorithms implemented in the DB engine.
-
-| Algorithm | Time              | Index Required | Pre-sort Required |
-|-----------|-------------------|----------------|-------------------|
+| Algorithm | Time | Index Required | Pre-sort |
+|-----------|------|---------------|---------| 
 | Hash Join | 22 sec | ✗ | ✗ |
-| Indexed Nested Loop Join | 46 sec | ✓ (built at query time) | ✗ |
-| Sort-Merge Join | 78 sec | ✗ | ✗ |
-| Nested Loop Join | too bad | ✗ | ✗ |
+| Indexed NLJ | 46 sec | ✓ (built at query time) | ✗ |
+| Sort-Merge | 78 sec | ✗ | ✗ |
+| Nested Loop | Too slow | ✗ | ✗ |
 
-### Observations
-
-- **Hash Join** achieved the best performance because it avoids repeated comparisons by using a hash table.
-- **Indexed Nested Loop Join** benefits from indexing but has additional overhead because the index is created during query execution.
-- **Sort-Merge Join** requires sorting phases, which increases execution time.
-- Printing results significantly increases runtime due to console I/O overhead.
-
-Hash Join significantly outperforms plain Nested Loop on large datasets, while Indexed Nested Loop shines for selective outer relations.
+**Key observations:**
+- Hash Join avoids repeated comparisons via hash table
+- Indexed NLJ benefits from indexing but adds overhead (index construction at runtime)
+- Sort-Merge requires two sorting phases; I/O-intensive
+- Plain NLJ unsuitable for large datasets
 
 ---
-### 7. External Merge Sort src/Q_Execution
-#### Sorts a table on any column (ASC or DESC) using a two-phase disk-based strategy, following the Volcano model so it composes naturally with any upstream operator.
-##### How it works
-```
-Phase 1 — Run Generation
-  ┌──────────────────────────────────────────────┐
-  │  Fetch tuples from child operator            │
-  │  Fill an in-memory buffer (one page at a     │
-  │  time), sort it locally, flush to disk       │
-  │  → produces N sorted single-page runs        │
-  └──────────────────────────────────────────────┘
 
-Phase 2 — Merge Passes
-  ┌──────────────────────────────────────────────┐
-  │  Pop pairs of runs from the queue            │
-  │  Merge each pair into a new sorted run       │
-  │  (multi-page, linked via next_page_id)       │
-  │  Push merged run back onto the queue         │
-  │  Repeat until one run remains                │
-  └──────────────────────────────────────────────┘
+## 💾 Persistence & Recovery
 
-  Total I/O Complexity: 
-  2N*(1+logB−1(N/B))
+**Full crash recovery** — all artifacts survive process termination.
+
+### Database Restart Sequence
 
 ```
----
-##  Persistence & Recovery
-
-All storage artifacts survive process termination and reload cleanly on startup.
-
-```
-Database Restart Sequence
-─────────────────────────
 1. DiskManager opens existing .db file
-   └─ Loads headers, directory, page mappings
+   └─ Loads database header, page directory
 
-2. TableHeap.loadMetaData()
-   └─ Restores schema, page chain, tuple boundaries
+2. Catalog loads schema metadata
+   └─ Tables, columns, data types
 
-3. Index reload loop
+3. TableHeap restores metadata
+   └─ Schema, page chains, tuple counts
+
+4. Index reload loop
    └─ Static Hash: deserializeHashIndex()
    └─ B+ Tree:     loadBPlusTree() → loadNode()
 
- All tuples accessible, all indexes functional
-```
-
-No manual rebuild step — the engine reconstructs itself entirely from disk pages.
-
----
-
-## near roadmap
-
-- [ ] Query Optimizer :)
----
-
-##  Build & Run
-
-**Prerequisites:** GCC / Clang with C++17, standard STL only — no external dependencies.
-
-### Step 1 — Insert data
-
-```bash
-g++ -std=c++17 -static \
-  src/Buffer/BufferPoolManager.c++ \
-  src/Buffer/LRU_replacement.c++ \
-  src/Storage/Disk/DiskManager.c++ \
-  src/Storage/Indexing/BPlusTreeIndex.c++ \
-  src/Storage/Indexing/BPlusTreeIndexWrapper.c++ \
-  src/Storage/Indexing/static_hash_index.c++ \
-  src/Storage/Indexing/StaticHashIndexWrapper.c++ \
-  src/Storage/Page/Field.c++ \
-  src/Storage/Page/page.c++ \
-  src/Storage/Page/Tuple.c++ \
-  src/Storage/Table/Column.c++ \
-  src/Storage/Table/RID.c++ \
-  src/Storage/Table/TableHeap.c++ \
-  src/Storage/Table/TableIterator.c++ \
-  test/test_table_load_store.c++ \
-  test/test_multiple_tables.c++ \
-  -g -o test_multiple_tables.exe
-
-./test_multiple_tables.exe
-```
-
-### Step 2 — Reload from disk (verify persistence)
-
-```bash
-g++ -std=c++17 -static \
-  src/Buffer/BufferPoolManager.c++ \
-  src/Buffer/LRU_replacement.c++ \
-  src/Storage/Disk/DiskManager.c++ \
-  src/Storage/Indexing/BPlusTreeIndex.c++ \
-  src/Storage/Indexing/BPlusTreeIndexWrapper.c++ \
-  src/Storage/Indexing/static_hash_index.c++ \
-  src/Storage/Indexing/StaticHashIndexWrapper.c++ \
-  src/Storage/Page/Field.c++ \
-  src/Storage/Page/page.c++ \
-  src/Storage/Page/Tuple.c++ \
-  src/Storage/Table/Column.c++ \
-  src/Storage/Table/RID.c++ \
-  src/Storage/Table/TableHeap.c++ \
-  src/Storage/Table/TableIterator.c++ \
-  test/test_table_load_store.c++ \
-  test/test_loading_DB.c++ \
-  -g -o test_loading_DB.exe
-
-./test_loading_DB.exe
+→ All tables accessible, all indexes functional
+→ No manual rebuild step
 ```
 
 ---
 
+## 🚀 Future Enhancements
+
+- **Query Optimizer** — cost-based plan selection (Selinger algorithm)
+- **Statistics & Cardinality Estimation** — informed join order selection
+- **Predicate Pushdown** — optimize filter placement
+- **Multi-threaded Execution** — parallel operator pipelines
+- **Transaction Support** — ACID guarantees (MVCC, WAL)
+- **Additional Indexes** — Bitmap, Partial, Covering indexes
+- **More Join Types** — Grace Hash Join, Hybrid Hash Join
+- **Window Functions** — OVER clauses for OLAP
+- **Correlated Subqueries** — EXISTS, IN, scalar subqueries
 
 ---
-
-*Built to understand how databases actually work — from raw bytes on disk to query execution.*

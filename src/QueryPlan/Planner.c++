@@ -49,7 +49,7 @@ AbstractPlanNode* Planner::PlanSelect(BoundSelectStatement* statement){
             }
         }
         
-        plan = new GroupByPlan(statement->group_by, functions,plan);
+        plan = new GroupByPlan(statement->group_by, functions, plan,statement->having);
     }
 
 
