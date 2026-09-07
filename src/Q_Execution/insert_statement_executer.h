@@ -18,19 +18,20 @@ using namespace std;
 class InsertTuple : public AbstractExecuter{
     private:
         TableHeap* table_heap;
-    public:
-        InsertTuple(TableHeap* table_heap,Tuple tuple):table_heap(table_heap){
-            RID rid = this->table_heap->insertTuple(tuple);  
-            rid.print(); 
-        }
+        Tuple tuple = Tuple({});
+        bool inserted{false};
 
+    public:
+        InsertTuple(TableHeap* table_heap,Tuple tuple);
+        bool is_inserted();
         void open(){};
         void close(){};
-        bool getNext(Tuple* tuple){return false;};
-        TableHeap* getTableHeap(){return this->table_heap;}
-        vector<Column> get_output_schema(){return {};}
-
-        bool has_column(string col_name){return false;};
+        bool getNext(Tuple* tuple);
+        TableHeap* getTableHeap();
+        vector<Column> get_output_schema();
+        Tuple get_tuple();
+        bool has_column(string col_name);
+        
 };
 
 #endif
