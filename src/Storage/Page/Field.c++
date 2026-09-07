@@ -269,7 +269,11 @@ void Field::serialize(char* buffer){
             offset += size;
             break;
         }
-
+        case TYPE_NULL:{
+            //type byte is N means null
+            buffer[0] = 'N';
+            break;
+        }
         default:
             throw runtime_error("incorrect data type");
             break;
@@ -289,6 +293,13 @@ void Field::serialize(char* buffer){
 
         switch (type)
         {
+            //handle null fields
+        case 'N':{
+            this->fieldType = TYPE_NULL;
+            this->is_null = true;
+            this->size = 0;
+            break;
+        }
         case 'I':{
             this->fieldType = TYPE_INT;
             memcpy(&this->VALUE_INT,buffer+offset,sizeof(int));

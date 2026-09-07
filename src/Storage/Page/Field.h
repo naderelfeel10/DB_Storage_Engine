@@ -6,7 +6,7 @@
 #include <cstring>
 #include <iomanip>
 using namespace std;
-enum FieldType { TYPE_INT, TYPE_STRING, TYPE_FLOAT, TYPE_BOOL };
+enum FieldType { TYPE_INT, TYPE_STRING, TYPE_FLOAT, TYPE_BOOL, TYPE_NULL};
 
 inline string getFieldTypeasString(FieldType type){
     switch (type)
