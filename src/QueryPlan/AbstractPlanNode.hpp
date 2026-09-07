@@ -3,6 +3,7 @@
 
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Binder\BoundExpression.h"
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Binder\BoundSelectStatement.h"
+#include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Binder\BoundInsertStatement.h"
 
 using namespace std;
 
@@ -14,7 +15,9 @@ enum class PlanType {
     JOIN,
     AGGREGATION,
     SORT,
-    LIMIT
+    LIMIT,
+    //
+    INSERT
 };
 
 

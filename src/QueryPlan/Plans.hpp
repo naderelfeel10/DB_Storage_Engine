@@ -328,4 +328,21 @@ public:
 };
 
 
+
+class InsertPlan : public AbstractPlanNode {
+
+public:
+    unique_ptr<BoundInsertStatement> bound_insert;
+
+    InsertPlan(unique_ptr<BoundInsertStatement> stmt)
+        :bound_insert(move(stmt)) {
+        this->type = PlanType::INSERT;
+    }
+
+    void PrintTree(int indent = 0)const override{
+        cout<<"insert plan"<<endl;
+    }
+
+};
+
 #endif
