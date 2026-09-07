@@ -37,6 +37,10 @@ void BoundConstantExpression::PrintTree(const string& prefix ,bool isLast ) cons
                      << "|-- value: "
                      << value.str_const << '\n';
                 break;
+            
+            case FieldType::TYPE_NULL:
+                cout << "NULL";
+                break;
         }
     }
 

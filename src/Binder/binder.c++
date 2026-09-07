@@ -12,14 +12,14 @@ unique_ptr<BoundStatement> Binder::bind(const hsql::SQLStatement* statement) {
 
             return unique_ptr<BoundStatement>(BindSelect(select_statement));
         }
-        /*
-        case hsql::kStmtInsert:
-            return InsertBinder(catalog)
-                .bind(
-                    static_cast<
-                        const hsql::InsertStatement*
-                    >(statement));
+        
+        case hsql::kStmtInsert:{
+            auto* insert_statement = static_cast<const hsql::InsertStatement*>(statement);
 
+            return unique_ptr<BoundStatement>(BindInsert(insert_statement));
+        
+        }
+        /*
         case hsql::kStmtUpdate:
             return UpdateBinder(catalog)
                 .bind(
@@ -620,6 +620,103 @@ void Binder::BindLimitOffset(const hsql::SelectStatement* statement, BoundSelect
         bound.offset =BindExpression(statement->limit->offset);
     }
 }
+
+
+//bind Insert
+/* to bind insert stmt we need :
+    1. bound the table as bound table
+    2. Bound the Cols as colref
+    3. bound values as expressions
+*/
+BoundInsertStatement* Binder::BindInsert(const hsql::InsertStatement* statement){
+    
+    
+    BoundInsertStatement* bound = new BoundInsertStatement();
+    
+    //check if null statement
+    if(statement ==nullptr)
+        throw runtime_error("cannot bind null insert statement");
+
+    //bound table
+    if(statement->tableName == nullptr){
+        throw runtime_error("table name can't be null");
+    }
+
+    //prepare bound_table from table_info 
+    string table_name = string(statement->tableName);
+    TableInfo* table_info  = this->catalog->GetTable(table_name);
+
+    BoundTable* bound_table = new BoundTable();
+    
+    bound_table->table_name = table_name;
+    bound_table->table_oid = table_info->table_id;
+    bound_table->schema = table_info->schema;
+
+    bound_table->printTable();
+
+    //prepare cols:
+    //insert stmt has a vector of col names 
+    
+    //extract cols from schema
+    vector<Column> target_cols;
+    vector<BoundExpression*>values; 
+
+    int stmt_values_index{};
+
+    //[10, "nader"];
+    for(auto& col:bound_table->schema){
+        cout<<col.getColName()<<endl;
+        bool found = false;
+
+        //loop throug cols, if found push to target_cols, else push null col
+        if(statement->columns){
+            for (char* col_name:*statement->columns){
+
+                if(string(col_name)==col.getColName()){
+                    found = true;
+                    break;
+                }
+            }
+        }
+        
+        if(found){
+            //push to cols
+            target_cols.push_back(col);
+            //push to values
+            BoundExpression* bound_expr = this->BindExpression(statement->values->at(stmt_values_index));
+            stmt_values_index++;
+
+            values.push_back(bound_expr);
+        }else{
+            Column null_col = Column(TYPE_NULL,col.getColName(), col.getColSize());
+            target_cols.push_back(null_col);
+            //push nullptr into values
+            values.push_back(nullptr);
+        }
+    }
+
+    for(auto&col:target_cols)col.printCol();
+    for(auto&expr:values){
+        if(expr)
+            expr->PrintTree();
+    }
+    bound_table->printTable();
+
+
+    //binding values
+    
+    //create bound insert then return it 
+
+    bound->table = bound_table;
+    bound->columns = target_cols;
+    bound->values = values;
+
+    bound->PrintTree();
+
+    return bound;
+
+}
+
 
 /*
 int
