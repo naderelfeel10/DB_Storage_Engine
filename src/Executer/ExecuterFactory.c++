@@ -181,6 +181,53 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
             return new SortAggregateExecuter(this->catalog->getBPM(),child, grouping_cols, grouping_functions,having_predicate);
 
         }
+        //////////////////////////////////////////////////////
+        case PlanType::INSERT:{
+
+            auto* insert_plan = static_cast<InsertPlan*>(plan);
+
+            //resolve table name from context, then get table heap from catalog
+            BoundTable* bound_table = insert_plan->bound_insert->table;
+            string table_name = bound_table->table_name;
+
+            bound_table->printTable();
+            cout<<table_name<<bound_table->table_oid<<endl;
+            
+            // get table_info, then get the table heap
+            TableInfo* table_info = catalog->GetTable(table_name);
+            cout<<table_info->table_name<<endl;
+            TableHeap* table_heap = table_info->get_table_heap();
+
+            //then resolve the tuple:
+            vector<Field>to_insert_cols;
+            for (size_t i = 0;i < insert_plan->bound_insert->columns.size();i++){
+                
+                Column& column = insert_plan->bound_insert->columns[i];
+                BoundExpression* expression = insert_plan->bound_insert->values[i];
+                column.printCol();
+                
+                //if expr is null, then col is null
+                if(expression==nullptr){
+                    Field null_field = Field(TYPE_NULL);
+                    to_insert_cols.push_back(null_field);
+                }else{
+                    expression->PrintTree();
+                    
+                    //else if it has a value, convert it into a                 
+                    BoundConstantExpression* const_expr = dynamic_cast<BoundConstantExpression*>(expression);
+                    Column* col = const_to_col(const_expr);
+                    col->setColName(column.getColName());
+                    
+                    col->printCol();
+                    to_insert_cols.push_back(*col->getField());
+                }  
+
+            }
+            Tuple tuple = Tuple(to_insert_cols);
+            tuple.print();
+            return new InsertTuple(table_heap, tuple);
+        }
+
         default:{
             throw runtime_error("invalid planType");
             return nullptr;
@@ -683,7 +730,7 @@ int main()
 
     TableHeap* user_table = user_info->table_heap;
 
-    InsertIntoUserTable(user_table);
+    //InsertIntoUserTable(user_table);
 
 
 
@@ -698,7 +745,7 @@ int main()
 
     TableHeap* order_table = orders_info->table_heap;
 
-    InsertIntoOrdersTable(order_table);
+    //InsertIntoOrdersTable(order_table);
 
     cout<<"\n==========CATALOG=========="<<endl;
 
@@ -729,10 +776,13 @@ int main()
     //const string sql = "SELECT u.user_id, Orders.user_id, u.firstName from User u inner join Orders on u.user_id = Orders.user_id where u.user_id > 120;";
     //const string sql = "SELECT u.user_id,u.age from User u order by u.age DESC;";
     //const string sql = "SELECT u.user_id, u.firstName, AVG(u.age), SUM(u.age) from User u group by u.user_id, u.firstName ;";
-    const string sql = "SELECT u.user_id, u.firstName, AVG(u.age), SUM(u.age)"
-            "from User u group by u.user_id, u.firstName having SUM(u.age)>70 AND AVG(u.age)>=30.1;";
+    //const string sql = "SELECT u.user_id, u.firstName, AVG(u.age), SUM(u.age)"
+    //        "from User u group by u.user_id, u.firstName having SUM(u.age)>70 AND AVG(u.age)>=30.1;";
 
 
+    //
+
+    const string sql = "insert into User (user_id, firstName) values (3,\'nader\');";
 
     hsql::SQLParserResult result;
 
@@ -763,7 +813,7 @@ int main()
 
     //executer factory
     ExecutorFactory factory(catalog, context);
-    Projection* executor = dynamic_cast<Projection*>(factory.createExecutor(plan));
+    InsertTuple* executor = dynamic_cast<InsertTuple*>(factory.createExecutor(plan));
 
     //execution
     //executor->open();
