@@ -17,6 +17,8 @@ private:
 
     AbstractPlanNode* PlanSelect(BoundSelectStatement* statement);
     AbstractPlanNode* PlanInsert(unique_ptr<BoundInsertStatement> statement);
+    AbstractPlanNode* PlanUpdate(unique_ptr<BoundUpdateStatement> statement);
+
 
 };
 

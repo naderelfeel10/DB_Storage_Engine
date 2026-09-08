@@ -11,6 +11,12 @@ AbstractPlanNode* Planner::Plan(unique_ptr<BoundStatement> statement){
             auto* insert = dynamic_cast<BoundInsertStatement*>(statement.release());
             return PlanInsert(unique_ptr<BoundInsertStatement>(insert));
         }
+
+        case BoundStatementType::UPDATE:{
+            auto* update = dynamic_cast<BoundUpdateStatement*>(statement.release());
+            return PlanUpdate(unique_ptr<BoundUpdateStatement>(update));
+        }
+
         default:
             throw runtime_error(" unsupported statement!!!!!!!!!!!");
     }
@@ -70,6 +76,12 @@ AbstractPlanNode* Planner::PlanSelect(BoundSelectStatement* statement){
 AbstractPlanNode* Planner::PlanInsert(unique_ptr<BoundInsertStatement> statement){
 
     InsertPlan* plan = new InsertPlan(move(statement));
+    return dynamic_cast<AbstractPlanNode*>(plan);
+}
+
+AbstractPlanNode* Planner::PlanUpdate(unique_ptr<BoundUpdateStatement> statement){
+
+    UpdatePlan* plan = new UpdatePlan(move(statement));
     return dynamic_cast<AbstractPlanNode*>(plan);
 }
 /*int 

@@ -345,4 +345,20 @@ public:
 
 };
 
+class UpdatePlan : public AbstractPlanNode {
+
+public:
+    unique_ptr<BoundUpdateStatement> bound_update;
+
+    UpdatePlan(unique_ptr<BoundUpdateStatement> stmt)
+        :bound_update(move(stmt)) {
+        this->type = PlanType::UPDATE;
+    }
+
+    void PrintTree(int indent = 0)const override{
+        cout<<"update plan"<<endl;
+    }
+
+};
+
 #endif
