@@ -19,6 +19,10 @@ class Select:public AbstractExecuter{
     private:
         AbstractExecuter* child_operator;
         AbstractPredicate* predicate;
+
+        //holds the rids of the filtered tuples
+        vector<RID>select_tuples_rids;
+        RID curr_rid = RID(-1,-1);
     public:
         Select(AbstractExecuter* child_operator, AbstractPredicate* predicate):child_operator(child_operator),predicate(predicate){
             open();
@@ -30,6 +34,13 @@ class Select:public AbstractExecuter{
         vector<Column> get_output_schema(){return this->child_operator->get_output_schema();}
 
         bool has_column(string col_name);
+
+        RID get_curr_rid(){
+            return this->curr_rid;
+        }
+        vector<RID> get_table_rids(){
+            return this->select_tuples_rids;
+        }
 };
 
 #endif

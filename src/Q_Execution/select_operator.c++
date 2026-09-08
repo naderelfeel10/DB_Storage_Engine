@@ -22,6 +22,16 @@ bool Select::getNext(Tuple* tuple){
     while(this->child_operator->getNext(tuple)){
 
         if(this->predicate->evaluate(tuple, cols)){
+            //update curr rid with the newely fetched tuple
+            //push to rids_vector
+            
+            //it has to be seq_scan not join or somthing
+            SeqScan* seq_scan = dynamic_cast<SeqScan*>(this->child_operator);
+            
+            if(seq_scan){
+                this->curr_rid = seq_scan->get_curr_rid();
+                this->select_tuples_rids.push_back(curr_rid);
+            }
             return true;
         }
     }
