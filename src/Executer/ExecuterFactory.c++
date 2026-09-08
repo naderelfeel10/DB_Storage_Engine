@@ -925,6 +925,8 @@ int main()
     //const string sql = "insert into User (user_id, firstName) values (3,\'nader\');";
 
     const string sql = "update User set user_id = 6, firstName='nader' where User.user_id > 150;";
+    const string sql = "delete from User where User.user_id=700;";
+
 
 
     hsql::SQLParserResult result;

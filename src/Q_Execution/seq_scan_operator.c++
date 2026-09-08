@@ -28,56 +28,74 @@ void SeqScan::close(){
 }
 
 bool SeqScan::getNext(Tuple* tuple){
-    int curr_page_id = this->curr_rid_pointer.getPageId();
-    int curr_slot_num = this->curr_rid_pointer.getSlotNum();
 
     int lst_page_id = this->Table_heap->getStoppigRID().getPageId();
 
-    //this->curr_rid_pointer.print();
-    // fetch the page 
-    char* page_buffer = this->Table_heap->BPM->fetchPage(curr_page_id);
-    if (page_buffer == nullptr) {
-        return false; 
-    }
-    PageHeader* pageHeader = reinterpret_cast<PageHeader*>(page_buffer);
-    Page* page = reinterpret_cast<Page*>(page_buffer);
+    while(true){
 
-    int num_of_tuples = pageHeader->num_tuples;
+        int curr_page_id = this->curr_rid_pointer.getPageId();
+        int curr_slot_num = this->curr_rid_pointer.getSlotNum();
 
-    int next_page_id = pageHeader->next_page_id;
-    int next_slot_num = curr_rid_pointer.getSlotNum()+1;
 
-    //cout<<next_page_id<<", "<<next_slot_num<<endl;
-
-    // if this is the last slot in the page
-    // then increment page_id
-    if(curr_slot_num >= num_of_tuples ){
-        //this->curr_rid_pointer = RID(next_page_id,0);
-        curr_page_id=next_page_id;
-        //if next page is beyond the last page in the table
-        // then return EOF 
-        if(curr_page_id>lst_page_id || curr_page_id==-1){
-            tuple = nullptr;
-            return false;
-        }else{
-            // if it's not the last page in the table, then get the first slot in it
-            this->curr_rid_pointer = RID(next_page_id,0);
-            *tuple = *this->Table_heap->getTuple(this->curr_rid_pointer);
-            this->curr_rid_pointer = RID(next_page_id,1);
-            return true;
+        //this->curr_rid_pointer.print();
+        // fetch the page 
+        char* page_buffer = this->Table_heap->BPM->fetchPage(curr_page_id);
+        if (page_buffer == nullptr) {
+            return false; 
         }
+        PageHeader* pageHeader = reinterpret_cast<PageHeader*>(page_buffer);
+        Page* page = reinterpret_cast<Page*>(page_buffer);
 
+        int num_of_tuples = pageHeader->num_tuples;
+
+        int next_page_id = pageHeader->next_page_id;
+        int next_slot_num = curr_rid_pointer.getSlotNum()+1;
+
+        //cout<<next_page_id<<", "<<next_slot_num<<endl;
+
+        // if this is the last slot in the page
+        // then increment page_id
+        if(curr_slot_num >= num_of_tuples ){
+            //this->curr_rid_pointer = RID(next_page_id,0);
+            curr_page_id=next_page_id;
+            //if next page is beyond the last page in the table
+            // then return EOF 
+            if(curr_page_id>lst_page_id || curr_page_id==-1){
+                tuple = nullptr;
+                return false;
+            }else{
+                // if it's not the last page in the table, then get the first slot in it
+                this->curr_rid_pointer = RID(next_page_id,0);
+                Tuple* tmp_tuple = nullptr;
+                tmp_tuple = this->Table_heap->getTuple(this->curr_rid_pointer);
+                
+                this->prev_rid_pointer = this->curr_rid_pointer;
+                this->curr_rid_pointer = RID(next_page_id,1);
+                //nullptr means it's deleted
+                if(tmp_tuple == nullptr){
+                    continue;
+                }
+                *tuple = *tmp_tuple;
+                return true;
+            }
+
+        }
+        Tuple* tmp_tuple = nullptr;
+        tmp_tuple = this->Table_heap->getTuple(this->curr_rid_pointer);
+        
+        this->prev_rid_pointer = this->curr_rid_pointer;
+        this->curr_rid_pointer = RID(curr_page_id,next_slot_num);
+
+        if(tmp_tuple == nullptr){
+            continue;
+        }
+        //this->curr_rid_pointer.print();
+        //this->prev_rid_pointer.print();
+
+        //tuple->print();
+        *tuple = *tmp_tuple;
+        return true;
     }
-    *tuple = *this->Table_heap->getTuple(this->curr_rid_pointer);
-    this->prev_rid_pointer = this->curr_rid_pointer;
-    this->curr_rid_pointer = RID(curr_page_id,next_slot_num);
-
-    //this->curr_rid_pointer.print();
-    //this->prev_rid_pointer.print();
-
-    //tuple->print();
-    return true;
-
 }
 
 bool SeqScan::has_column(string col_name){

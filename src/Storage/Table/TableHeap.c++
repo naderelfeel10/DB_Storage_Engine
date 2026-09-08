@@ -122,7 +122,12 @@ Tuple* TableHeap::getTuple(RID rid){
 
     // select this tuple from the page
     Tuple* tuple = new Tuple({});
-    page->getTuple(rid.getActualPair().getSlotNum(),*tuple);
+    bool res = page->getTuple(rid.getActualPair().getSlotNum(),*tuple);
+
+    //if the tuple is deleted
+    if(res == false){
+        return nullptr;
+    }
     
     return tuple;
 }
@@ -150,6 +155,7 @@ RID TableHeap::updateTuple(RID rid, Tuple tuple){
     else{
         page->updateTuple(rid.getSlotNum(), tuple);
     }
+
 
     return rid;
 
@@ -200,6 +206,17 @@ void TableHeap::deleteTuple(RID rid){
     num_of_tuples--;
 }
 
+bool TableHeap::deleteTupleBool(RID rid){
+
+    // select the targted page from the buffer
+    char* page_buffer = BPM->fetchPage(rid.getPageId());
+    Page* page = reinterpret_cast<Page*>(page_buffer);
+
+    // just delete the selected slot num
+    bool res = page->deleteTuple(rid.getActualPair().getSlotNum());
+    num_of_tuples--;
+    return res;
+}
 
 
 void TableHeap::displayTablePages() {

@@ -65,6 +65,7 @@ class TableHeap{
         RID insertTuple(Tuple tuple);
         RID updateTuple(RID rid, Tuple tuple);
         void deleteTuple(RID rid);
+        bool deleteTupleBool(RID rid);
         Tuple* getTuple(RID rid);
 
         //overloading to update a list of rids
@@ -105,7 +106,7 @@ class TableHeap{
         vector<RID> getTableRIDS(){
             return this->table_rids;
         }
-
+        
         ~TableHeap();
 
 };
