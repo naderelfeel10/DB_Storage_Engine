@@ -19,8 +19,6 @@ enum class BoundStatementType {
 
 class BoundStatement {
 public:
-    virtual ~BoundStatement() = default;
-
     virtual BoundStatementType
     type() const = 0;
     // just printing

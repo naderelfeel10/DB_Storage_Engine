@@ -19,14 +19,14 @@ unique_ptr<BoundStatement> Binder::bind(const hsql::SQLStatement* statement) {
             return unique_ptr<BoundStatement>(BindInsert(insert_statement));
         
         }
-        /*
-        case hsql::kStmtUpdate:
-            return UpdateBinder(catalog)
-                .bind(
-                    static_cast<
-                        const hsql::UpdateStatement*
-                    >(statement));
+        
+        case hsql::kStmtUpdate:{
+            auto* update_statement = static_cast<const hsql::UpdateStatement*>(statement);
 
+            return unique_ptr<BoundStatement>(BindUpdate(update_statement));
+
+        }
+        /*
         case hsql::kStmtDelete:
             return DeleteBinder(catalog)
                 .bind(
@@ -188,6 +188,7 @@ BoundExpression* Binder::BindColumnRef(const hsql::Expr* expression){
     return col_ref;
 
 }
+
 //bind constants integer, float, and strings
 //find integer 
 BoundExpression* Binder::BindIntegerLiteral(hsql::Expr* expression) {
@@ -717,7 +718,88 @@ BoundInsertStatement* Binder::BindInsert(const hsql::InsertStatement* statement)
 
 }
 
+BoundUpdateStatement* Binder::BindUpdate(const hsql::UpdateStatement* statement){
+    //check if null
+    if(statement == nullptr)
+        throw runtime_error("can't bind null update statement");
 
+    //table can't be null
+    if (statement->table == nullptr)
+        throw runtime_error("this table cannot be null");
+
+
+    //fetch table info from table name
+    BoundUpdateStatement* bound = new BoundUpdateStatement();
+    string table_name = statement->table->name;
+    TableInfo* table_info = catalog->GetTable(table_name);
+
+    //check if table is in catalog
+    if(!table_info)
+        throw runtime_error("this table does not exist "+table_name);
+
+    //bound table from table info
+    BoundTable* bound_table = new BoundTable();
+
+    bound_table->table_name = table_name;
+    bound_table->table_oid = table_info->table_id;
+    bound_table->schema = table_info->schema;
+
+    //add to the context
+    this->context->AddTable(*bound_table);
+
+    //the desired res is like this :
+    // update User sett user_id=9, firstName='nader' where User.user_id > 10;
+    //cols :[user_id, firstName, NULL, NULL]
+    //values:[9, nader, nullptr, nullptr]
+
+     for(auto& column : bound_table->schema){
+        bool found = false;
+
+        BoundExpression* bound_value = nullptr;
+
+        // search whether this schema 
+        for(auto* update : *statement->updates){
+
+            if(update == nullptr)
+                throw runtime_error("invalid update syntax");
+
+
+            string update_column = update->column;
+            if(column.getColName()==update_column){
+                
+                if(found){
+                    throw runtime_error("column updated more than once:"+update_column);
+                }
+
+                found = true;
+                bound_value = BindExpression(update->value);
+                break;
+            }
+        }
+
+        bound->columns.push_back(column);
+        bound->values.push_back(bound_value);
+    }
+
+
+    //bind where also
+    if(statement->where != nullptr){
+        bound->where = BindExpression(statement->where);
+    }else{
+        bound->where = nullptr;
+    }
+
+    bound->table = bound_table;
+
+    for(auto&col:bound->columns)col.printCol();
+    for(auto&expr:bound->values){
+        if(expr)
+            expr->PrintTree();
+    }
+    bound_table->printTable();
+
+    return bound;
+}
 /*
 int
 main(){
