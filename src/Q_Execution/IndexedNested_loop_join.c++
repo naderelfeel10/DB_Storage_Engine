@@ -18,6 +18,8 @@ void IndexedNestedLoopJoin::set_output_schema(){
 
     // change col name to be table_name.col_name
     // that's how i can differentiate between cols with same names in diff tables
+
+    /*
     string table_name = outer_table->getTableHeap()->getTableName();
     for(int i=0; i<outer_schema.size();i++){
         string col_name = outer_schema[i].getColName();
@@ -29,7 +31,8 @@ void IndexedNestedLoopJoin::set_output_schema(){
         string col_name = inner_schema[i].getColName();
         inner_schema[i].setColName(table_name+'.'+col_name);
     }
-    
+    */
+   
     // concat
     outer_schema.insert(outer_schema.end(), inner_schema.begin(), inner_schema.end());
 

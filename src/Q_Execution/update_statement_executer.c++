@@ -20,8 +20,8 @@ Tuple UpdateTuple::get_tuple(){
 
 bool UpdateTuple::update_tuple(RID rid, Tuple tuple){
 
-    RID new_rid = this->table_heap->updateTuple(rid, tuple);
-    new_rid.print();
+    RID new_rid = this->table_heap->updateTuple(rid, tuple).getActualPair();
+    //new_rid.print();
     
     if(new_rid.getPageId() !=-1 && new_rid.getSlotNum() != -1)
         updated = true;

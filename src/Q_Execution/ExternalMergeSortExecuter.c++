@@ -13,12 +13,13 @@ void ExternalMergeSort::open(){
      */
     this->child_executer->open();
     //set output schema
-    for(auto&col:this->child_executer->get_output_schema()){
+    this->output_schema = this->child_executer->get_output_schema();
+    /*for(auto&col:this->child_executer->get_output_schema()){
         string col_name = this->child_executer->getTableHeap()->getTableName()+'.'+col.getColName();
         col.setColName(col_name);
         //col.printCol();
         this->output_schema.push_back(col);
-    }
+    }*/
     Tuple tuple({});
     // we have to create a page to store upcomming tuples at it then locally sort it then write it on disk
     this->tmp_page_id = this->BPM->newPage();

@@ -17,6 +17,8 @@ class SeqScan: public AbstractExecuter{
         vector<Column> output_schema;
 
         RID  curr_rid_pointer = RID(-1,-1);
+        RID  prev_rid_pointer = RID(-1,-1);
+
         //holds the rids of the all table tuples
         vector<RID>table_rids;
     public:
@@ -37,6 +39,9 @@ class SeqScan: public AbstractExecuter{
         }
         RID get_curr_rid(){
             return this->curr_rid_pointer;
+        }
+        RID get_prev_rid(){
+            return this->prev_rid_pointer;
         }
 };
 

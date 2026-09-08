@@ -57,6 +57,7 @@ void MergeJoin::set_output_schema(){
     vector<Column> outer_schema = this->outer_table->get_output_schema();
     vector<Column> inner_schema = this->inner_table->get_output_schema();
 
+    /*
     string table_name = this->outer_table->getTableHeap()->getTableName();
     for(int i=0; i<outer_schema.size();i++){
         string col_name = outer_schema[i].getColName();
@@ -68,6 +69,7 @@ void MergeJoin::set_output_schema(){
         string col_name = inner_schema[i].getColName();
         inner_schema[i].setColName(table_name+'.'+col_name);
     }
+    */
 
     outer_schema.insert(outer_schema.end(), inner_schema.begin(), inner_schema.end());
     this->table_schema = outer_schema;

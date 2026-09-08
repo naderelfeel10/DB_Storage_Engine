@@ -52,7 +52,10 @@ void HashAggregateExecuter::close(){
 
 
 void HashAggregateExecuter::set_output_schema(){
-    //output grouping vector + grouping functions   
+    //output grouping vector + grouping functions
+
+    this->output_schema = this->table->get_output_schema();
+    /*
     int size = this->grouping_keys.size();
     string table_name = this->table->getTableHeap()->getTableName();
     
@@ -63,8 +66,9 @@ void HashAggregateExecuter::set_output_schema(){
         col.setColName(col_name);
         this->output_schema.push_back(col);
     }
+    */
 
-    size = this->grouping_functions.size();
+    int size = this->grouping_functions.size();
     for(int i{0};i<size;i++){
         int col_index = grouping_functions[i].function_key;
         Column col = this->table->get_output_schema()[col_index];
@@ -73,6 +77,8 @@ void HashAggregateExecuter::set_output_schema(){
         col.setColName(function_name+'('+col.getColName()+')');
         this->output_schema.push_back(col);
     }
+    
+    for(auto&col:this->output_schema)col.printCol();
 }
 
 

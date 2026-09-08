@@ -20,7 +20,8 @@ bool Select::getNext(Tuple* tuple){
     //vector<Column>cols = (this->child_operator)->getTableHeap()->getCols();
     vector<Column>cols = this->child_operator->get_output_schema();
     while(this->child_operator->getNext(tuple)){
-
+        //tuple->print();
+        //this->curr_rid.print();
         if(this->predicate->evaluate(tuple, cols)){
             //update curr rid with the newely fetched tuple
             //push to rids_vector
@@ -29,7 +30,8 @@ bool Select::getNext(Tuple* tuple){
             SeqScan* seq_scan = dynamic_cast<SeqScan*>(this->child_operator);
             
             if(seq_scan){
-                this->curr_rid = seq_scan->get_curr_rid();
+                this->curr_rid = seq_scan->get_prev_rid();
+                //this->curr_rid.print();
                 this->select_tuples_rids.push_back(curr_rid);
             }
             return true;
@@ -41,9 +43,9 @@ bool Select::getNext(Tuple* tuple){
 
 
 bool Select::has_column(string col_name){
-    string table_name = this->child_operator->getTableHeap()->getTableName();
+    //string table_name = this->child_operator->getTableHeap()->getTableName();
     for(auto&col:this->get_output_schema()){
-        if(table_name+'.'+col.getColName()==col_name)return true;
+        if(col.getColName()==col_name)return true;
     }
     return false;
 }

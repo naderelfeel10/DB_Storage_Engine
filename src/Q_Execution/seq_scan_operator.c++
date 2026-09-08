@@ -9,7 +9,17 @@ SeqScan::SeqScan(TableHeap* table_heap){
 }
 void SeqScan::open(){
     this->curr_rid_pointer = this->Table_heap->getStartingRID();
+    //update seq_scan output schema and append table_name at the begining :
+
     this->output_schema = this->Table_heap->get_output_schema();
+    string table_name = this->Table_heap->getTableName();
+
+    for(int i=0;i<this->output_schema.size(); i++){
+        //table_name.col_name
+        string new_name = table_name+'.'+this->output_schema[i].getColName();
+        this->output_schema[i].setColName(new_name);
+        this->output_schema[i].printCol();
+    }
 
     //for(auto&col:this->output_schema)col.printCol();
 }
@@ -23,6 +33,7 @@ bool SeqScan::getNext(Tuple* tuple){
 
     int lst_page_id = this->Table_heap->getStoppigRID().getPageId();
 
+    //this->curr_rid_pointer.print();
     // fetch the page 
     char* page_buffer = this->Table_heap->BPM->fetchPage(curr_page_id);
     if (page_buffer == nullptr) {
@@ -35,6 +46,8 @@ bool SeqScan::getNext(Tuple* tuple){
 
     int next_page_id = pageHeader->next_page_id;
     int next_slot_num = curr_rid_pointer.getSlotNum()+1;
+
+    //cout<<next_page_id<<", "<<next_slot_num<<endl;
 
     // if this is the last slot in the page
     // then increment page_id
@@ -56,7 +69,13 @@ bool SeqScan::getNext(Tuple* tuple){
 
     }
     *tuple = *this->Table_heap->getTuple(this->curr_rid_pointer);
+    this->prev_rid_pointer = this->curr_rid_pointer;
     this->curr_rid_pointer = RID(curr_page_id,next_slot_num);
+
+    //this->curr_rid_pointer.print();
+    //this->prev_rid_pointer.print();
+
+    //tuple->print();
     return true;
 
 }
