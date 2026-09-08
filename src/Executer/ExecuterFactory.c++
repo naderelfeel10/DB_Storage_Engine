@@ -267,11 +267,14 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
             Tuple dummy_tuple({});
             AbstractExecuter* update_tuple_executer = new UpdateTuple(table_heap);
 
+            //for(auto&rid:seq_scan->get_table_rids())rid.print();
+
             while(select_executer->getNext(&dummy_tuple)){
                 
+                //dummy_tuple.print();
                 //fetch the rid 
                 RID curr_rid = select_executer->get_curr_rid();
-                curr_rid.print();
+                //curr_rid.print();
                 
                 //this index represent curr field in the actual tuple 
                 int field_index{};
@@ -281,21 +284,21 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
 
                     Column& column = update_plan->bound_update->columns[i];
                     BoundExpression* expression = update_plan->bound_update->values[i];
-                    column.printCol();
+                    //column.printCol();
 
                     //if expr is null, then col
                     if(expression==nullptr){
                         Field field = dummy_tuple.fields[field_index];
                         new_col_fields.push_back(field);
                     }else{
-                        expression->PrintTree();
+                        //expression->PrintTree();
 
                         //else if it has a value, convert it into a                 
                         BoundConstantExpression* const_expr = dynamic_cast<BoundConstantExpression*>(expression);
                         Column* col = const_to_col(const_expr);
                         col->setColName(column.getColName());
 
-                        col->printCol();
+                        //col->printCol();
                         new_col_fields.push_back(*col->getField());
 
                     }
@@ -304,7 +307,7 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
                 }
 
                 Tuple new_tuple = Tuple(new_col_fields);
-                new_tuple.print();
+                //new_tuple.print();
 
                 //now we have the new_tuple, and the rid, just update it
                 static_cast<UpdateTuple*>(update_tuple_executer)->update_tuple(curr_rid, new_tuple);
@@ -312,6 +315,52 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
 
             return update_tuple_executer;
             
+
+        }
+        case PlanType::DELETE:{
+            auto* delete_plan = static_cast<DeletePlan*>(plan);
+            
+            //resolve table name from context, then get table heap from catalog
+            BoundTable* bound_table = delete_plan->bound_delete->table;
+            string table_name = bound_table->table_name;
+
+            //bound_table->printTable();
+            //cout<<table_name<<bound_table->table_oid<<endl;
+            
+            // get table_info, then get the table heap
+            TableInfo* table_info = catalog->GetTable(table_name);
+            cout<<table_info->table_name<<endl;
+            TableHeap* table_heap = table_info->get_table_heap();
+
+            //prepare the child executer form where we will fetch all tuples and check againest the predict 
+            SeqScan* seq_scan = new SeqScan(table_heap);
+
+            Select* select_executer = nullptr;
+            //prepare the predict (where condition)
+            if(delete_plan->bound_delete->where){
+                AbstractPredicate* predicate = build_predicate(delete_plan->bound_delete->where, seq_scan);
+
+                //this select executer will check againest the predict and return only to_update tuples 
+                select_executer = new Select(seq_scan, predicate);
+            }
+            Tuple dummy_tuple({});
+            AbstractExecuter* delete_tuple_executer = new DeleteTuple(table_heap);
+
+            if(select_executer){
+            
+                while(select_executer->getNext(&dummy_tuple)){
+                    //fetch the rid 
+                    RID curr_rid = select_executer->get_curr_rid();
+                    static_cast<DeleteTuple*>(delete_tuple_executer)->delete_tuple(curr_rid);
+                }
+            }else{
+                while(seq_scan->getNext(&dummy_tuple)){
+                    //fetch the rid 
+                    RID curr_rid = select_executer->get_curr_rid();
+                    static_cast<DeleteTuple*>(delete_tuple_executer)->delete_tuple(curr_rid);
+                }
+            }
+            return delete_tuple_executer;
 
         }
 
@@ -869,7 +918,9 @@ int main()
     //        "from User u group by u.user_id, u.firstName having SUM(u.age)>70 AND AVG(u.age)>=30.1;";
 
 
-    //
+    // select u.user_id, u.firstName from User u where u.user_id>150;
+    // insert into User (user_id, firstName) values(170, 'elfeel');
+
 
     //const string sql = "insert into User (user_id, firstName) values (3,\'nader\');";
 
@@ -1069,7 +1120,11 @@ while (true) {
 
                 break;
             }
-        
+            case PlanType::DELETE: {
+                DeleteTuple* delete_executor = dynamic_cast<DeleteTuple*>(factory.createExecutor(plan));
+
+                break;
+            }
         
         case PlanType::SEQ_SCAN: {
         
