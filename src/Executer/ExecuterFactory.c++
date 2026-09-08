@@ -228,6 +228,93 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
             return new InsertTuple(table_heap, tuple);
         }
 
+        /*
+            BoundTable* table;
+            vector<Column> columns;
+            vector<BoundExpression*> values;
+            BoundExpression* where;
+        */
+        case PlanType::UPDATE:{
+
+            UpdatePlan* update_plan  = static_cast<UpdatePlan*>(plan);
+
+            //resolve table name from context, then get table heap from catalog
+            BoundTable* bound_table = update_plan->bound_update->table;
+            string table_name = bound_table->table_name;
+
+            bound_table->printTable();
+            cout<<table_name<<bound_table->table_oid<<endl;
+            
+            // get table_info, then get the table heap
+            TableInfo* table_info = catalog->GetTable(table_name);
+            cout<<table_info->table_name<<endl;
+            TableHeap* table_heap = table_info->get_table_heap();
+
+            //prepare the child executer form where we will fetch all tuples and check againest the predict 
+            SeqScan* seq_scan = new SeqScan(table_heap);
+            //prepare the predict (where condition)
+            AbstractPredicate* predicate = build_predicate(update_plan->bound_update->where, seq_scan);
+
+            //this select executer will check againest the predict and return only to_update tuples 
+            Select* select_executer = new Select(seq_scan, predicate);
+
+            //we need to prepare the tuple to update data with 
+            //we have cols, and values 
+
+            //fetch all tuples from select_executer
+            //for every tuple to update, we have only some cols to update
+            // so the original cols should remain the same non-changed
+            Tuple dummy_tuple({});
+            AbstractExecuter* update_tuple_executer = new UpdateTuple(table_heap);
+
+            while(select_executer->getNext(&dummy_tuple)){
+                
+                //fetch the rid 
+                RID curr_rid = select_executer->get_curr_rid();
+                curr_rid.print();
+                
+                //this index represent curr field in the actual tuple 
+                int field_index{};
+
+                vector<Field>new_col_fields;
+                for (size_t i = 0;i < update_plan->bound_update->columns.size();i++){
+
+                    Column& column = update_plan->bound_update->columns[i];
+                    BoundExpression* expression = update_plan->bound_update->values[i];
+                    column.printCol();
+
+                    //if expr is null, then col
+                    if(expression==nullptr){
+                        Field field = dummy_tuple.fields[field_index];
+                        new_col_fields.push_back(field);
+                    }else{
+                        expression->PrintTree();
+
+                        //else if it has a value, convert it into a                 
+                        BoundConstantExpression* const_expr = dynamic_cast<BoundConstantExpression*>(expression);
+                        Column* col = const_to_col(const_expr);
+                        col->setColName(column.getColName());
+
+                        col->printCol();
+                        new_col_fields.push_back(*col->getField());
+
+                    }
+                    //move to next field in the tuple wheather it's null or not 
+                    field_index++;
+                }
+
+                Tuple new_tuple = Tuple(new_col_fields);
+                new_tuple.print();
+
+                //now we have the new_tuple, and the rid, just update it
+                static_cast<UpdateTuple*>(update_tuple_executer)->update_tuple(curr_rid, new_tuple);
+            }
+
+            return update_tuple_executer;
+            
+
+        }
+
         default:{
             throw runtime_error("invalid planType");
             return nullptr;
@@ -730,7 +817,7 @@ int main()
 
     TableHeap* user_table = user_info->table_heap;
 
-    //InsertIntoUserTable(user_table);
+    InsertIntoUserTable(user_table);
 
 
 
@@ -762,6 +849,8 @@ int main()
 
     cout<<"=============================\n";
 
+    /*
+
     //const std::string sql = "SELECT u.user_id, u.firstName from User as u "
     //                        "inner join Orders on u.user_id = Orders.user_id "
     //                        "WHERE u.user_id = 2 order by u.user_id limit 10 offset 5;";
@@ -782,7 +871,10 @@ int main()
 
     //
 
-    const string sql = "insert into User (user_id, firstName) values (3,\'nader\');";
+    //const string sql = "insert into User (user_id, firstName) values (3,\'nader\');";
+
+    const string sql = "update User set user_id = 6, firstName='nader' where User.user_id > 150;";
+
 
     hsql::SQLParserResult result;
 
@@ -813,12 +905,26 @@ int main()
 
     //executer factory
     ExecutorFactory factory(catalog, context);
+    
+
     InsertTuple* executor = dynamic_cast<InsertTuple*>(factory.createExecutor(plan));
+
+
+    if(executor->is_inserted()){
+        cout<<"1 row inserted successfully."<<endl;
+        executor->get_tuple().print();
+    }
+    
+
+    UpdateTuple* executor = dynamic_cast<UpdateTuple*>(factory.createExecutor(plan));
 
     //execution
     //executor->open();
 
+
+
     cout<<"\n==========output==========\n";
+
 
 
     Tuple tuple({});
@@ -835,5 +941,234 @@ int main()
     executor->close();
 
     cout<<"=============================\n";
+
+    */
+string sql;
+
+while (true) {
+
+    cout << "\nELFEEL_DB> ";
+
+    if (!getline(cin, sql))
+        break;
+
+    // Ignore empty input
+    if (sql.empty())
+        continue;
+
+    // Optional: exit command
+    if (sql == "exit" || sql == "quit")
+        break;
+
+    try {
+
+        // ============================================================
+        // 1. Parse
+        // ============================================================
+
+        hsql::SQLParserResult result;
+
+        hsql::SQLParser::parse(sql, &result);
+
+        if (result.size() == 0) {
+            cout << "No SQL statement found." << endl;
+            continue;
+        }
+
+
+        // ============================================================
+        // 2. Bind
+        // ============================================================
+
+        BindContext* context = new BindContext();
+
+        Binder* binder = new Binder(catalog, context);
+
+        const hsql::SQLStatement* stmt = result.getStatement(0);
+
+        unique_ptr<BoundStatement> bound_stmt =
+            binder->bind(stmt);
+
+
+        // ============================================================
+        // Debug: Binding information
+        // ============================================================
+
+        cout << "\nTables in Bind Context: "
+             << context->tables.size()
+             << endl;
+
+        for (auto& table : context->tables) {
+            table.printTable();
+        }
+
+        cout << "\n"
+             << "================================================================================================="
+             << endl;
+
+        bound_stmt->PrintTree();
+
+        cout << "\n"
+             << "================================================================================================="
+             << endl;
+
+
+        // ============================================================
+        // 3. Create Plan
+        // ============================================================
+
+        Planner* planner = new Planner();
+
+        AbstractPlanNode* plan =
+            planner->Plan(move(bound_stmt));
+
+
+        // ============================================================
+        // 4. Print Plan
+        // ============================================================
+
+        plan->PrintTree();
+
+
+        // ============================================================
+        // 5. Create Executor
+        // ============================================================
+
+        ExecutorFactory factory(catalog, context);
+
+        //AbstractExecuter* executor = factory.createExecutor(plan);
+
+
+        // ============================================================
+        // 6. Execute
+        // ============================================================
+
+        cout << "\n========== output ==========\n";
+
+    //AbstractExecuter* executor = factory.createExecutor(plan);
+
+        switch (plan->type){
+        
+            case PlanType::INSERT:{
+                InsertTuple* insert_executor = dynamic_cast<InsertTuple*>(factory.createExecutor(plan));
+            
+                insert_executor->open();
+            
+                if (insert_executor->is_inserted()) {
+                    cout << "1 row inserted successfully.\n";
+                    insert_executor->get_tuple().print();
+                }
+            
+                insert_executor->close();
+                break;
+            }
+        
+        
+            case PlanType::UPDATE: {
+                UpdateTuple* update_executor = dynamic_cast<UpdateTuple*>(factory.createExecutor(plan));
+
+                break;
+            }
+        
+        
+        case PlanType::SEQ_SCAN: {
+        
+            SeqScan* seq_scan_executor = dynamic_cast<SeqScan*>(factory.createExecutor(plan));
+
+        
+            seq_scan_executor->open();
+        
+            cout << "\n========== output ==========\n";
+        
+            for (auto& col : seq_scan_executor->get_output_schema()) {
+                cout << col.getColName() << "   | ";
+            }
+        
+            cout << '\n';
+        
+            Tuple tuple({});
+        
+            while (seq_scan_executor->getNext(&tuple)) {
+                tuple.print();
+            }
+        
+            seq_scan_executor->close();
+        
+            cout << "=============================\n";
+        
+            break;
+        }
+
+
+        case PlanType::PROJECTION: {
+        
+            Projection* projection_executor = dynamic_cast<Projection*>(factory.createExecutor(plan));
+
+            projection_executor->open();
+        
+            cout << "\n========== output ==========\n";
+        
+            for (auto& col : projection_executor->get_output_schema()) {
+                cout << col.getColName() << "   | ";
+            }
+        
+            cout << '\n';
+        
+            Tuple tuple({});
+        
+            while (projection_executor->getNext(&tuple)) {
+                tuple.print();
+            }
+        
+            projection_executor->close();
+        
+            cout << "=============================\n";
+        
+            break;
+        }
+
+
+        case PlanType::FILTER: {
+        
+            Select* filter_executor = dynamic_cast<Select*>(factory.createExecutor(plan));
+        
+            filter_executor->open();
+        
+            cout << "\n========== output ==========\n";
+        
+            for (auto& col : filter_executor->get_output_schema()) {
+                cout << col.getColName() << "   | ";
+            }
+        
+            cout << '\n';
+        
+            Tuple tuple({});
+        
+            while (filter_executor->getNext(&tuple)) {
+                tuple.print();
+            }
+        
+            filter_executor->close();
+        
+            cout << "=============================\n";
+        
+            break;
+        }
+        
+            default:
+                cout << "Unsupported plan type.\n";
+                break;
+        }
+
+
+    }
+
+        catch (const exception& e) {
+
+        cout << "\nExecution Error: "
+             << e.what()
+             << endl;
+    }
+}
 
 }
