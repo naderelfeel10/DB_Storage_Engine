@@ -26,14 +26,12 @@ unique_ptr<BoundStatement> Binder::bind(const hsql::SQLStatement* statement) {
             return unique_ptr<BoundStatement>(BindUpdate(update_statement));
 
         }
-        /*
-        case hsql::kStmtDelete:
-            return DeleteBinder(catalog)
-                .bind(
-                    static_cast<
-                        const hsql::DeleteStatement*
-                    >(statement));
+        case hsql::kStmtDelete:{
+            auto* delete_statement = static_cast<const hsql::DeleteStatement*>(statement);
+            return unique_ptr<BoundStatement>(BindDelete(delete_statement));
 
+        }
+        /*
         default:
             throw BinderException(
                 "Unsupported statement");
@@ -800,6 +798,55 @@ BoundUpdateStatement* Binder::BindUpdate(const hsql::UpdateStatement* statement)
 
     return bound;
 }
+
+
+//delete binder: 
+//delete from User where user_id = 10;
+//we need table and where condition
+BoundDeleteStatement* Binder::BindDelete(const hsql::DeleteStatement* statement){
+    //check if null
+    if(statement == nullptr)
+        throw runtime_error("null delete statement");
+
+    if(statement->tableName == nullptr)
+        throw runtime_error("table cannot be null");
+
+    //fetch the table
+    string table_name = statement->tableName;
+    TableInfo* table_info = catalog->GetTable(table_name);
+
+    if(table_info == nullptr){
+        throw runtime_error("table does not exist:"+table_name);
+    }
+
+    //create bound delete statement
+    BoundDeleteStatement* bound = new BoundDeleteStatement();
+
+    BoundTable* bound_table = new BoundTable();
+    
+    //bound table from table_info
+    bound_table->table_name = table_name;
+    bound_table->table_oid = table_info->table_id;
+    bound_table->schema = table_info->schema;
+    bound->table = bound_table;
+
+    context->AddTable(*bound_table);
+    bound_table->printTable();
+
+    //bind where condition
+    if(statement->expr != nullptr){
+        bound->where =BindExpression(statement->expr);
+    }
+    //else means delete every thing
+    else{
+        bound->where = nullptr;
+    }
+
+
+    return bound;
+}
+
+
 /*
 int
 main(){

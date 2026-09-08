@@ -16,6 +16,8 @@
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Binder\BoundInsertStatement.h"
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\parser\external\sql-parser\src\sql\InsertStatement.h"
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Binder\BoundUpdateStatement.h"
+#include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Binder\BoundDeleteStatement.h"
+
 
 using namespace std;
 
@@ -37,6 +39,7 @@ public:
     BoundSelectStatement* BindSelect(const hsql::SelectStatement* statement);
     BoundInsertStatement* BindInsert(const hsql::InsertStatement* statement);
     BoundUpdateStatement* BindUpdate(const hsql::UpdateStatement* statement);
+    BoundDeleteStatement* BindDelete(const hsql::DeleteStatement* statement);
 
 
     //sub functions used in main ones
