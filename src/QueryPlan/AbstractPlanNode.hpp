@@ -5,6 +5,8 @@
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Binder\BoundSelectStatement.h"
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Binder\BoundInsertStatement.h"
 #include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Binder\BoundUpdateStatement.h"
+#include"D:\SWE\DB\CMU\MY_DB_ENGINE\Minimal_DB_ENGINE\src\Binder\BoundDeleteStatement.h"
+
 using namespace std;
 
 //multiple plan types like seq_scan, project, filer, ...
@@ -18,7 +20,8 @@ enum class PlanType {
     LIMIT,
     //
     INSERT,
-    UPDATE
+    UPDATE,
+    DELETE
 };
 
 
@@ -35,7 +38,7 @@ public:
             cout << "  ";
         }
     }
-    
+
 };
 
 #endif

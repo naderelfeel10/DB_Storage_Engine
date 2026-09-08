@@ -1,7 +1,6 @@
 #include"Planner.hpp"
 
 AbstractPlanNode* Planner::Plan(unique_ptr<BoundStatement> statement){
-
     switch(statement->type()){
         //if stmt type is select call it's function to handle it
         case BoundStatementType::SELECT:{
@@ -16,7 +15,10 @@ AbstractPlanNode* Planner::Plan(unique_ptr<BoundStatement> statement){
             auto* update = dynamic_cast<BoundUpdateStatement*>(statement.release());
             return PlanUpdate(unique_ptr<BoundUpdateStatement>(update));
         }
-
+        case BoundStatementType::DELETE:{
+            auto* delete_stmt = dynamic_cast<BoundDeleteStatement*>(statement.release());
+            return PlanDelete(unique_ptr<BoundDeleteStatement>(delete_stmt));
+        }
         default:
             throw runtime_error(" unsupported statement!!!!!!!!!!!");
     }
@@ -82,6 +84,12 @@ AbstractPlanNode* Planner::PlanInsert(unique_ptr<BoundInsertStatement> statement
 AbstractPlanNode* Planner::PlanUpdate(unique_ptr<BoundUpdateStatement> statement){
 
     UpdatePlan* plan = new UpdatePlan(move(statement));
+    return dynamic_cast<AbstractPlanNode*>(plan);
+}
+
+AbstractPlanNode* Planner::PlanDelete(unique_ptr<BoundDeleteStatement> statement){
+
+    DeletePlan* plan = new DeletePlan(move(statement));
     return dynamic_cast<AbstractPlanNode*>(plan);
 }
 /*int 

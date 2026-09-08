@@ -361,4 +361,27 @@ public:
 
 };
 
+
+class DeletePlan : public AbstractPlanNode {
+public:
+
+    unique_ptr<BoundDeleteStatement> bound_delete;
+
+    DeletePlan(unique_ptr<BoundDeleteStatement> statement):bound_delete(move(statement)){
+        type = PlanType::DELETE;
+    }
+
+    BoundDeleteStatement* getBoundDelete() const{
+        return bound_delete.get();
+    }
+    //just printing
+    void PrintTree(int indend=0) const override{
+        cout << "|-- DeletePlan" << endl;
+
+        if (bound_delete) {
+            bound_delete->PrintTree();
+        }
+    }
+};
+
 #endif
