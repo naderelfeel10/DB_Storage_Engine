@@ -106,6 +106,10 @@ RID TableHeap::insertTuple(Tuple tuple){
         starting_rid = RID(last_page_id, slot_num);
     }
     stopping_rid = RID(last_page_id, slot_num);
+    
+    //push to table rids
+    this->table_rids.push_back(stopping_rid);
+   
     return stopping_rid;
 }
 
@@ -148,6 +152,39 @@ RID TableHeap::updateTuple(RID rid, Tuple tuple){
     }
 
     return rid;
+
+}
+
+//this function takes a list of rids instead of just one and updates the whole list with out extra function calls
+vector<RID> TableHeap::updateTuple(vector<RID> rids, Tuple tuple){
+
+    vector<RID>updated_rids;
+
+    for(auto&rid: rids){
+        // select the page
+        char* page_buffer = BPM->fetchPage(rid.getPageId());
+        Page* page = reinterpret_cast<Page*>(page_buffer);
+
+        // get the old tuple
+        Tuple* old_tuple = this->getTuple(rid);
+
+        // if new tuple size > old one size
+        // we need to delete the old one, insert the new one in another place with another RID
+        if(old_tuple->getTupleSize() < tuple.getTupleSize()){
+        
+            page->deleteTuple(rid.getSlotNum());
+            RID new_rid = insertTuple(tuple);
+            rid.updateActualPair(new_rid);
+
+        }
+        else{
+            page->updateTuple(rid.getSlotNum(), tuple);
+        }
+
+        updated_rids.push_back(rid);
+    }
+
+    return updated_rids;
 
 }
 
@@ -432,6 +469,9 @@ void TableHeap::loadMetaData(){
 
 
     }
+    
+    this->table_rids.clear();
+    this->setAllRIDs();
 
 
 }
@@ -619,6 +659,40 @@ void TableHeap::deleteTableHeap(){
     first_page_id =-1;
     last_page_id =-1;
 }
+
+
+
+vector<RID> TableHeap::setAllRIDs(){
+
+    //start with the first page_id and loop throug each slot at it till finishes
+    // then start the next page 
+    int page_id = this->first_page_id;
+    
+    while(page_id != -1){
+
+        char* page_buffer = BPM->fetchPage(page_id);
+        Page* page = reinterpret_cast<Page*>(page_buffer);
+        PageHeader* page_header = reinterpret_cast<PageHeader*>(page_buffer);
+
+        if(page == nullptr) throw runtime_error("failed to fetch page");
+
+        int num_slots = page_header->num_tuples;
+
+        for(int slot_num = 0; slot_num < num_slots; slot_num++){
+            //if the tuple is deleted, skip
+            if(!page->is_deleted(slot_num)){
+                this->table_rids.emplace_back(RID(page_id, slot_num));
+            }
+        }
+        //fetch the next page 
+        page_id = page_header->next_page_id;
+
+    }
+    for(auto&rid:this->table_rids)rid.print();
+
+    return this->table_rids;
+}
+
 
 TableHeap::~TableHeap(){
     saveMetaData();

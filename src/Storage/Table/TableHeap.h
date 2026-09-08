@@ -49,6 +49,8 @@ class TableHeap{
         RID starting_rid = RID(-1,-1);
         RID stopping_rid = RID(-1,-1);
 
+        vector<RID>table_rids;
+
     public:
         // a map between col_name -> vector of indexes on this col ex : (HASH_Index, B+, ...)
         map<string, vector<Index*> > indexes_map;
@@ -64,6 +66,9 @@ class TableHeap{
         RID updateTuple(RID rid, Tuple tuple);
         void deleteTuple(RID rid);
         Tuple* getTuple(RID rid);
+
+        //overloading to update a list of rids
+        vector<RID> updateTuple(vector<RID> rid, Tuple tuple);
 
         
         void saveMetaData();
@@ -95,6 +100,12 @@ class TableHeap{
         vector<Column>get_output_schema(){return this->cols;}
     
         void deleteTableHeap();
+        vector<RID> setAllRIDs();
+
+        vector<RID> getTableRIDS(){
+            return this->table_rids;
+        }
+
         ~TableHeap();
 
 };

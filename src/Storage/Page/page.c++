@@ -226,6 +226,13 @@ char* Page::getData(){
     return this->data;
 }
 
+//check if tuple is deleted
+bool Page::is_deleted(int slot_num){
+    Tuple tuple({});
+    this->getTuple(slot_num, tuple);
+
+    return tuple.get_is_deleted();
+}
 /*
 int main(){
 

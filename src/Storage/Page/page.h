@@ -42,6 +42,8 @@ class Page{
         vector<Field> get_field_from_all_tuples(int col_index);
         vector<vector<Field>> get_custom_fields_from_all_tuples(vector<int> col_indexes);
 
+        bool is_deleted(int slot_num);
+
 
 };
 

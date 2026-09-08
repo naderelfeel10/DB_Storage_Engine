@@ -159,6 +159,7 @@ void Field::print() {
         case TYPE_FLOAT: std::cout << std::left << std::setw(VAL_WIDTH) << VALUE_FLOAT; break;
         case TYPE_BOOL:  std::cout << std::left << std::setw(VAL_WIDTH) << (VALUE_BOOL ? "true" : "false"); break;
         case TYPE_STRING: std::cout << std::left << std::setw(VAL_WIDTH) << (VALUE_STRING ? VALUE_STRING : "[EMPTY]"); break;
+        case TYPE_NULL: cout<<"NULL";break;
         default:         std::cout << std::left << std::setw(VAL_WIDTH) << "??"; break;
     }
     std::cout << " | ";
