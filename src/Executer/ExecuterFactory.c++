@@ -364,6 +364,16 @@ AbstractExecuter* ExecutorFactory::createExecutor(AbstractPlanNode* plan){
 
         }
 
+        case PlanType::CREATE_TABLE:{
+            CreateTablePlan* create_plan = static_cast<CreateTablePlan*>(plan);
+
+            AbstractExecuter* create_table_executer = new CreateTable(catalog, *create_plan->getBoundCreateTable());
+            cout<<static_cast<CreateTable*>(create_table_executer)->is_created()<<endl;
+
+            //TODO : create a createTable executer and return it (done)
+            //return just null for now
+            return create_table_executer;
+        }
         default:{
             throw runtime_error("invalid planType");
             return nullptr;
@@ -927,7 +937,9 @@ int main()
     const string sql = "update User set user_id = 6, firstName='nader' where User.user_id > 150;";
     const string sql = "delete from User where User.user_id=700;";
 
+    const string sql = "delete from User where User.user_id=700;";
 
+    
 
     hsql::SQLParserResult result;
 
@@ -997,7 +1009,10 @@ int main()
 
     */
 string sql;
+//string sql = "CREATE TABLE students (name TEXT, student_number INTEGER, city TEXT, grade DOUBLE);";
 
+//string sql = "CREATE TABLE students (name TEXT, student_number INTEGER NOT NULL, city TEXT, grade DOUBLE PRIMARY KEY UNIQUE);";
+//string sql = "insert into students (name, student_number, city, grade) values ('nader', 1, 'cairo', 3.12);";
 while (true) {
 
     cout << "\nELFEEL_DB> ";
@@ -1127,7 +1142,12 @@ while (true) {
 
                 break;
             }
-        
+
+            case PlanType::CREATE_TABLE: {
+                CreateTable* create_executor = dynamic_cast<CreateTable*>(factory.createExecutor(plan));
+                catalog->printCatalog();
+                break;
+            }
         case PlanType::SEQ_SCAN: {
         
             SeqScan* seq_scan_executor = dynamic_cast<SeqScan*>(factory.createExecutor(plan));
