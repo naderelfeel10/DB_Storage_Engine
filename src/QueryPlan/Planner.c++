@@ -19,6 +19,10 @@ AbstractPlanNode* Planner::Plan(unique_ptr<BoundStatement> statement){
             auto* delete_stmt = dynamic_cast<BoundDeleteStatement*>(statement.release());
             return PlanDelete(unique_ptr<BoundDeleteStatement>(delete_stmt));
         }
+        case BoundStatementType::CREATE_TABLE:{
+            auto* create_stmt = dynamic_cast<BoundCreateTableStatement*>(statement.release());
+            return PlanCreateTable(unique_ptr<BoundCreateTableStatement>(create_stmt));
+        }
         default:
             throw runtime_error(" unsupported statement!!!!!!!!!!!");
     }
@@ -92,6 +96,17 @@ AbstractPlanNode* Planner::PlanDelete(unique_ptr<BoundDeleteStatement> statement
     DeletePlan* plan = new DeletePlan(move(statement));
     return dynamic_cast<AbstractPlanNode*>(plan);
 }
+
+
+AbstractPlanNode* Planner::PlanCreateTable(unique_ptr<BoundCreateTableStatement> statement){
+    
+    if(statement == nullptr){
+        throw runtime_error("create stmt is null");
+    }
+
+    return new CreateTablePlan(move(statement));
+}
+
 /*int 
 main(){
 

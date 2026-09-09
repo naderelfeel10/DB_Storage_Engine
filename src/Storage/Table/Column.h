@@ -13,6 +13,7 @@ class Column{
         FieldType field_type;
         std::string col_name;
         int col_max_size;
+        bool is_null{false};
 
     public:
 
@@ -34,6 +35,9 @@ class Column{
 
         int getColSize();
         FieldType getColType(){return this->field_type;}
+        void setNull(bool value){
+            this->is_null = value;
+        }
         void printCol();
 
 };

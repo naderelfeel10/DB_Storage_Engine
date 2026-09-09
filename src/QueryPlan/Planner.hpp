@@ -19,7 +19,8 @@ private:
     AbstractPlanNode* PlanInsert(unique_ptr<BoundInsertStatement> statement);
     AbstractPlanNode* PlanUpdate(unique_ptr<BoundUpdateStatement> statement);
     AbstractPlanNode* PlanDelete(unique_ptr<BoundDeleteStatement> statement);
-
+    
+    AbstractPlanNode* PlanCreateTable(unique_ptr<BoundCreateTableStatement> statement);
 
 
 };

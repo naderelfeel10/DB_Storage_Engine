@@ -384,4 +384,34 @@ public:
     }
 };
 
+
+class CreateTablePlan : public AbstractPlanNode{
+
+private:
+    unique_ptr<BoundCreateTableStatement> bound_create_table;
+
+public:
+
+    CreateTablePlan(unique_ptr<BoundCreateTableStatement> statement):bound_create_table(move(statement)){
+        type = PlanType::CREATE_TABLE;
+    }
+
+    BoundCreateTableStatement* getBoundCreateTable() const{
+        return bound_create_table.get();
+    }
+
+    //just printing
+    void PrintTree(int ident) const override {
+
+        cout << "|-- CreateTablePlan"
+             << endl;
+
+        if (bound_create_table != nullptr) {
+
+            bound_create_table->PrintTree();
+        }
+    }
+};
+
+
 #endif
