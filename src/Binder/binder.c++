@@ -31,6 +31,11 @@ unique_ptr<BoundStatement> Binder::bind(const hsql::SQLStatement* statement) {
             return unique_ptr<BoundStatement>(BindDelete(delete_statement));
 
         }
+        case hsql::kStmtCreate:{
+            auto* create_statement = static_cast<const hsql::CreateStatement*>(statement);
+            return unique_ptr<BoundStatement>(bindCreateTable(create_statement));
+
+        }
         /*
         default:
             throw BinderException(
@@ -813,6 +818,7 @@ BoundDeleteStatement* Binder::BindDelete(const hsql::DeleteStatement* statement)
 
     //fetch the table
     string table_name = statement->tableName;
+    //cout<<table_name;
     TableInfo* table_info = catalog->GetTable(table_name);
 
     if(table_info == nullptr){
@@ -840,6 +846,254 @@ BoundDeleteStatement* Binder::BindDelete(const hsql::DeleteStatement* statement)
     //else means delete every thing
     else{
         bound->where = nullptr;
+    }
+
+
+    return bound;
+}
+
+
+
+FieldType Binder::convertColumnType(const hsql::ColumnType& type){
+
+    switch (type.data_type) {
+
+        case hsql::DataType::INT:
+            return TYPE_INT;
+        case hsql::DataType::DOUBLE:
+            return TYPE_FLOAT;
+        case hsql::DataType::TEXT:
+            return TYPE_STRING;
+        case hsql::DataType::BOOLEAN:
+            return TYPE_BOOL;
+        default:
+            throw runtime_error("unsupported column type");
+    }
+}
+
+BoundCreateTableStatement*Binder::bindCreateTable(const hsql::CreateStatement* statement){
+
+    //check if null
+    if(statement == nullptr)
+        throw runtime_error("cannot bind null CREATE statement");
+
+    //check if table name exists
+    if(statement->tableName==nullptr){
+        throw runtime_error("table name is missing");
+    }
+
+    string table_name = statement->tableName;
+    cout<<table_name<<endl;
+
+    //check if table already exists
+    //this returns nullptr if not found
+    TableInfo* existing = catalog->GetTable(table_name);
+
+    if(existing!=nullptr&& !statement->ifNotExists){
+        throw runtime_error("table already exists"+table_name);
+    }
+
+    //now bound the statement
+    BoundCreateTableStatement* bound = new BoundCreateTableStatement();
+
+    //bind basic meta data like table name and the schema
+    bound->table_name = table_name;
+    bound->if_not_exists =statement->ifNotExists;
+    cout<<bound->if_not_exists<<endl;
+
+    if(statement->schema != nullptr){
+        bound->schema_name = statement->schema;
+    }
+
+    //bind the cols and constraits 
+    if(statement->columns == nullptr || statement->columns->empty()){
+        throw runtime_error("table cols can't be empty");
+    }
+
+    //extract col names from stmt->cols then feed to teh bound
+    unordered_set<string> column_names;
+
+    for(auto* column_def :*statement->columns){
+
+        if(column_def == nullptr)throw runtime_error("invalid column definition");
+        if(column_def->name == nullptr)throw runtime_error("column name cannot be null");
+
+        //prepare each col then push to the bound
+        string column_name = column_def->name;
+        cout<<column_name<<endl;
+        //set is better to check uniqueness in col names
+        //so check if already exists
+        if(!column_names.insert(column_name).second){
+            throw runtime_error("duplicate column:"+column_name);
+        }
+
+        //bound table needs a vector of Columns
+        FieldType field_type =convertColumnType(column_def->type);
+        size_t column_size;
+
+        switch(column_def->type.data_type){
+
+            case hsql::DataType::INT:
+                column_size = sizeof(int);
+                break;
+            case hsql::DataType::DOUBLE:
+                column_size = sizeof(double);
+                break;
+            case hsql::DataType::TEXT:
+                column_size = 30;
+                break;
+            case hsql::DataType::BOOLEAN:
+                column_size = sizeof(bool);
+                break;
+            default:
+                throw runtime_error("unsupported column type");
+
+        }
+
+        Column column(field_type, column_name,column_size);
+
+        //initial field values
+        if(!column_def->nullable){
+            column.setNull(false);
+        }else{
+            column.setNull(true);
+        }
+
+        //push to the bound
+        bound->columns.push_back(column);
+
+        //prepare constraints
+        if(column_def->column_constraints!=nullptr){
+            //loop through the set of constraints
+            for(auto&constraint:*column_def->column_constraints){
+                //constraint type may be : PK, FK, unique
+                switch(constraint){
+                    case hsql::ConstraintType::PrimaryKey:{
+                        //pk has type, cols, and constraints
+                        BoundTableConstraint pk;
+
+                        pk.type =BoundConstraintType::PRIMARY_KEY;
+                        pk.columns.push_back(column_name);
+                        //push to bound constraints
+                        bound->constraints.push_back(pk);
+                        
+                        for(auto&col_name:pk.columns)cout<<col_name<<" ";
+                        break;
+                    }
+                    case hsql::ConstraintType::Unique:{
+                        BoundTableConstraint unique;
+
+                        unique.type = BoundConstraintType::UNIQUE;
+                        unique.columns.push_back(column_name);
+                        bound->constraints.push_back(unique);
+
+                        for(auto&col_name:unique.columns)cout<<col_name<<" ";
+                        break;
+                    }
+                    //null and not null is represented inside the col itself
+                    case hsql::ConstraintType::NotNull:
+                    case hsql::ConstraintType::Null:
+                        //break;
+                        break;
+                    //col0level and table level will be handled 
+                    case hsql::ConstraintType::ForeignKey:
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+        }
+        
+        //for col-level references 
+        //col_def has a list of references
+        if(column_def->references != nullptr){
+
+            for(auto*reference:*column_def->references){
+                if(reference==nullptr)
+                    continue;
+                //it's fk constraint
+                BoundTableConstraint fk;
+                fk.type = BoundConstraintType::FOREIGN_KEY;
+                fk.columns.push_back(column_name);
+
+                //it must mention table name, can't be null
+                if(reference->table == nullptr)
+                    throw runtime_error("foreign key referenced table is null");
+
+                fk.referenced_table = reference->table;
+
+                //refernce has some cols, for each one push to fk constraint referenced cols
+                if(reference->columns != nullptr){
+                    for(char* ref_column :*reference->columns){
+                        cout<<ref_column<<endl;
+                        fk.referenced_columns.push_back(ref_column);
+                    }
+                }
+
+                //finally push this fk into bound constraints
+                bound->constraints.push_back(fk);
+            }
+        }
+    }
+    
+    //that was col-level handling
+    //but also table itself has some constraints to handle
+    if(statement->tableConstraints != nullptr){
+        for(auto* table_constraint:*statement->tableConstraints){
+        
+            if(table_constraint == nullptr)
+                continue;
+  
+            BoundTableConstraint constraint;
+            //handle type
+            switch(table_constraint->type){
+                case hsql::ConstraintType::PrimaryKey:
+                    constraint.type = BoundConstraintType::PRIMARY_KEY;
+                    break;
+                case hsql::ConstraintType::Unique:
+                    constraint.type = BoundConstraintType::UNIQUE;
+                    break;
+                case hsql::ConstraintType::ForeignKey:
+                    constraint.type = BoundConstraintType::FOREIGN_KEY;
+                    break;
+
+                default:
+                    throw runtime_error("unsupported table constraint");
+            }
+
+            //handle col_names
+            if(table_constraint->columnNames != nullptr){
+                for(char* column_name:*table_constraint->columnNames){
+                    cout<<column_name<<endl;
+                    constraint.columns.push_back(column_name);
+                }
+            }
+            //handle fks
+            auto* foreign_key =dynamic_cast<hsql::ForeignKeyConstraint*>(table_constraint);
+
+            //check if it has a fk
+            if(foreign_key != nullptr){
+
+                if(foreign_key->references == nullptr){
+                    throw runtime_error("foreign key has no ref clause");
+                }
+                if(foreign_key->references->table == nullptr){
+                    throw runtime_error("foreign key ref table is null");
+                }
+                //fetch referenced-table
+                constraint.referenced_table = foreign_key->references->table;
+                //fetch cols as well
+                if(foreign_key->references->columns != nullptr){
+                    for(char* column :*foreign_key->references->columns){
+                        cout<<column<<endl;
+                        constraint.referenced_columns.push_back(column);
+                    }
+                }
+            }
+
+            bound->constraints.push_back(constraint);
+        }
     }
 
 
