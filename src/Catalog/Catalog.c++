@@ -1,6 +1,7 @@
 #include<iostream>
 #include"Catalog.h"
 
+vector<int> column_names_to_indexes(vector<string> names, vector<Column> schema);
 
 Catalog::Catalog(BufferPoolManager* BPM, bool createNew):BPM(BPM){
 
@@ -79,6 +80,110 @@ TableInfo* Catalog::CreateTable(const string& table_name,const vector<Column>& s
     tables[table_name] = info;
 
     return info;
+}
+
+
+//this function is to create table from it's bounded stmt :
+//it should resolve meta data like table_name, id, schema ..
+//create the tableheap
+//resolve constraints like pk, fk, unique
+TableInfo* Catalog::CreateTable(const BoundCreateTableStatement& statement){
+    
+    //check if table already exists in our database
+    string table_name = statement.table_name;
+    auto it = tables.find(table_name);
+
+    //if found. check if the query has (if not exist)
+    if(it != tables.end()){
+        //if not exists, so just return the found tableInfo
+        if(statement.if_not_exists){
+            return it->second;
+        }
+        
+        throw runtime_error("this table already exists "+table_name);
+    }
+
+    //resolve and validate schema
+    if(statement.columns.empty()){
+        throw runtime_error("empty schema");
+    }
+    //create tableheap to be represented on hd
+    TableHeap* heap =new TableHeap(BPM, -1, -1);
+
+    heap->setTableName(table_name);
+    heap->setCols(statement.columns);
+
+    //create tableInfo and fill with basic table metadata
+    TableInfo* info = new TableInfo();
+
+    info->table_id = ++next_table_id;
+    info->table_name = table_name;
+    info->schema =statement.columns;
+    info->table_heap = heap;
+    info->first_page_id = heap->get_first_page_id();
+
+    //constraints resolving
+    for(const auto& constraint :statement.constraints){
+        //resolve col_indexes
+        vector<int> column_indexes = column_names_to_indexes(constraint.columns,statement.columns);
+
+        //then assigne it based on it's type
+        switch(constraint.type){
+            case BoundConstraintType::PRIMARY_KEY:{
+                info->primary_key_columns =column_indexes;
+                break;
+            }
+            case BoundConstraintType::UNIQUE:{
+                info->unique_constraints.push_back(column_indexes);
+                break;
+            }
+            case BoundConstraintType::FOREIGN_KEY:{
+                ForeignKeyInfo fk;
+                //col-level ref
+                fk.column_ids = column_names_to_indexes(constraint.columns,statement.columns);
+
+                string referenced_table_name = constraint.referenced_table;
+                TableInfo* referenced_table_info = GetTable(referenced_table_name);
+
+                if(referenced_table_info == nullptr){
+                    throw runtime_error("referenced table does not exist");
+                }
+
+                int table_id = referenced_table_info->table_id;
+                fk.referenced_table_id = table_id;
+
+                fk.referenced_column_ids = column_names_to_indexes(constraint.referenced_columns, referenced_table_info->schema);
+                
+                info->foreign_keys.push_back(fk);
+                break;
+            }
+        }
+    }
+
+    tables.emplace(table_name,info);
+    return info;
+}
+
+//simple function to convert from schema of col_names into it's col_id
+vector<int> column_names_to_indexes(vector<string> names, vector<Column> schema){
+    vector<int> indexes;
+
+    for(const string& name:names){
+        int index = -1;
+        for(int i{};i<schema.size();i++){
+            if(schema[i].getColName()==name){
+                index = i;
+                break;
+            }
+        }
+        //col_name not found
+        if(index == -1){
+            throw runtime_error("column does not exist "+name);
+        }
+        indexes.push_back(index);
+    }
+
+    return indexes;
 }
 
 
